@@ -18,6 +18,13 @@ const Reservation = sequelize.define("Reservation", {
   estimatedKwh: { type: DataTypes.FLOAT },
 
   estimatedCost: { type: DataTypes.FLOAT },
+
+  vehicleType: { type: DataTypes.STRING },
+
+  qrCodeId: {
+    type: DataTypes.STRING,
+    unique: true,
+  },
 });
 
 module.exports = Reservation;

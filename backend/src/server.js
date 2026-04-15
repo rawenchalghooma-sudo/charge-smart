@@ -10,7 +10,7 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log("MySQL connected successfully");
 
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log("Database synchronized");
 
     app.listen(PORT, () => {

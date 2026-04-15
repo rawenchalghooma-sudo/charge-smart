@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   BatteryCharging,
@@ -14,6 +14,7 @@ import {
   Cpu,
   Loader2,
   LogOut,
+  Check,
 } from "lucide-react";
 
 type EnergySource = "Solaire" | "Batterie" | "Réseau";
@@ -28,6 +29,14 @@ type Station = {
   status: "Disponible" | "Occupée";
   energy_source: EnergySource;
   station_battery: number;
+};
+
+type ChargingPoint = {
+  id: string;
+  label: string;
+  connectorType: string;
+  powerKw: number;
+  status: "Disponible" | "Occupée";
 };
 
 function sourceBadge(source: EnergySource) {
@@ -48,11 +57,81 @@ function modeBadge(mode: "ECO" | "BOOST" | "WAIT") {
   return "bg-amber-100 text-amber-700";
 }
 
+function buildMockChargingPoints(station: Station | null): ChargingPoint[] {
+  if (!station) return [];
+
+  const fastConnector = station.power_kw >= 50 ? "CCS Combo" : "Type 2";
+
+  if (station.id === 1) {
+    return [
+      {
+        id: "cp-1",
+        label: "Borne 1",
+        connectorType: "Type 2",
+        powerKw: 22,
+        status: "Disponible",
+      },
+      {
+        id: "cp-2",
+        label: "Borne 2",
+        connectorType: "CCS Combo",
+        powerKw: 50,
+        status: "Occupée",
+      },
+      {
+        id: "cp-3",
+        label: "Borne 3",
+        connectorType: "Type 2",
+        powerKw: 11,
+        status: "Disponible",
+      },
+    ];
+  }
+
+  if (station.id === 2) {
+    return [
+      {
+        id: "cp-4",
+        label: "Borne 1",
+        connectorType: "CCS Combo",
+        powerKw: 50,
+        status: "Disponible",
+      },
+      {
+        id: "cp-5",
+        label: "Borne 2",
+        connectorType: "Type 2",
+        powerKw: 22,
+        status: "Disponible",
+      },
+    ];
+  }
+
+  return [
+    {
+      id: `cp-${station.id}-1`,
+      label: "Borne 1",
+      connectorType: fastConnector,
+      powerKw: station.power_kw,
+      status: station.status === "Disponible" ? "Disponible" : "Occupée",
+    },
+    {
+      id: `cp-${station.id}-2`,
+      label: "Borne 2",
+      connectorType: "Type 2",
+      powerKw: 22,
+      status: "Disponible",
+    },
+  ];
+}
+
 export default function PlugDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const routerLocation = useLocation();
 
   const [station, setStation] = useState<Station | null>(null);
+  const [selectedPointId, setSelectedPointId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +151,7 @@ export default function PlugDetails() {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.message || "Impossible de charger la borne.");
+          setError(data.message || "Impossible de charger la station.");
           setStation(null);
           return;
         }
@@ -92,6 +171,18 @@ export default function PlugDetails() {
     }
   }, [id]);
 
+  const chargingPoints = useMemo(() => buildMockChargingPoints(station), [station]);
+
+  useEffect(() => {
+    const firstAvailable = chargingPoints.find((point) => point.status === "Disponible");
+    if (firstAvailable) {
+      setSelectedPointId(firstAvailable.id);
+    }
+  }, [chargingPoints]);
+
+  const selectedPoint =
+    chargingPoints.find((point) => point.id === selectedPointId) ?? null;
+
   const modeIA: "ECO" | "BOOST" | "WAIT" =
     station?.energy_source === "Solaire"
       ? "ECO"
@@ -101,9 +192,28 @@ export default function PlugDetails() {
 
   const connector =
     station?.power_kw && station.power_kw >= 50 ? "CCS Combo" : "Type 2";
+
   const price =
     station?.power_kw && station.power_kw >= 50 ? "0.42 DT / kWh" : "0.35 DT / kWh";
-  const distanceKm = "—";
+
+  const distanceKm =
+    (routerLocation.state as any)?.distanceKm !== undefined
+      ? String((routerLocation.state as any).distanceKm)
+      : "—";
+
+  const availableCount = chargingPoints.filter((p) => p.status === "Disponible").length;
+  const totalCount = chargingPoints.length;
+
+  const handleContinueReservation = () => {
+    if (!station || !selectedPoint) return;
+
+    navigate(`/user/reserve/${station.id}`, {
+      state: {
+        selectedChargingPoint: selectedPoint,
+        stationName: station.name,
+      },
+    });
+  };
 
   if (loading) {
     return (
@@ -111,7 +221,7 @@ export default function PlugDetails() {
         <div className="mx-auto flex max-w-4xl items-center justify-center rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
           <div className="flex items-center gap-3 text-slate-700">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Chargement des détails de la borne...
+            Chargement des détails de la station...
           </div>
         </div>
       </div>
@@ -122,9 +232,9 @@ export default function PlugDetails() {
     return (
       <div className="min-h-screen bg-slate-50 px-6 py-10">
         <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-black text-slate-900">Borne introuvable</h1>
+          <h1 className="text-2xl font-black text-slate-900">Station introuvable</h1>
           <p className="mt-2 text-slate-600">
-            {error || "La borne demandée n’existe pas ou n’est pas disponible."}
+            {error || "La station demandée n’existe pas ou n’est pas disponible."}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -160,15 +270,15 @@ export default function PlugDetails() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <Link
-              to="/user/dashboard"
+              to="/user/session/nearby"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               <ArrowLeft size={16} />
-              Retour dashboard
+              Retour stations proches
             </Link>
 
             <div>
-              <div className="text-sm font-bold text-slate-900">Détails de la borne</div>
+              <div className="text-sm font-bold text-slate-900">Détails de la station</div>
               <div className="text-xs text-slate-500">
                 ID : <span className="font-semibold">{station.id}</span>
               </div>
@@ -178,7 +288,7 @@ export default function PlugDetails() {
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
               <ShieldCheck size={14} />
-              Informations de la borne
+              Informations station & bornes
             </span>
 
             <button
@@ -225,7 +335,7 @@ export default function PlugDetails() {
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <InfoCard
                   icon={<Bolt size={18} />}
-                  title="Puissance"
+                  title="Puissance station"
                   value={`${station.power_kw} kW`}
                   color="amber"
                 />
@@ -237,7 +347,7 @@ export default function PlugDetails() {
                 />
                 <InfoCard
                   icon={<PlugZap size={18} />}
-                  title="Connecteur"
+                  title="Connecteur principal"
                   value={connector}
                   color="slate"
                 />
@@ -255,9 +365,10 @@ export default function PlugDetails() {
 
               <div className="mt-4 space-y-3">
                 <Row label="Nom" value={station.name} />
-                <Row label="Statut" value={station.status} />
-                <Row label="Tarif" value={price} />
+                <Row label="Statut station" value={station.status} />
+                <Row label="Tarif estimé" value={price} />
                 <Row label="Distance" value={`${distanceKm} km`} />
+                <Row label="Bornes disponibles" value={`${availableCount} / ${totalCount}`} />
               </div>
 
               <div className="mt-5">
@@ -315,12 +426,12 @@ export default function PlugDetails() {
             </div>
 
             <div className="mt-5 space-y-4">
-              <Row label="Nom de la borne" value={station.name} />
+              <Row label="Nom de la station" value={station.name} />
               <Row label="Localisation" value={station.location} />
               <Row label="Latitude" value={Number(station.lat).toFixed(4)} />
               <Row label="Longitude" value={Number(station.lng).toFixed(4)} />
-              <Row label="Puissance disponible" value={`${station.power_kw} kW`} />
-              <Row label="Connecteur" value={connector} />
+              <Row label="Puissance station" value={`${station.power_kw} kW`} />
+              <Row label="Connecteur principal" value={connector} />
               <Row label="Source actuelle" value={station.energy_source} />
               <Row label="Mode IA" value={modeIA} />
               <Row label="Tarification" value={price} />
@@ -328,36 +439,77 @@ export default function PlugDetails() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="text-sm font-bold text-slate-900">Actions</div>
+            <div className="text-sm font-bold text-slate-900">Choix de borne</div>
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
-              Cette page permet à l’utilisateur de vérifier les informations de la borne
-              avant de passer à la réservation.
+              Consulte les bornes disponibles de cette station, choisis celle qui convient
+              à ton besoin, puis continue vers la page de réservation.
             </div>
 
             <div className="mt-5 space-y-3">
-              {station.status === "Disponible" ? (
-                <Link
-                  to={`/user/reserve/${station.id}`}
-                  className="flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700"
-                >
-                  Réserver cette borne
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="flex w-full cursor-not-allowed items-center justify-center rounded-2xl bg-slate-200 px-5 py-3 text-sm font-bold text-slate-500"
-                >
-                  Borne indisponible
-                </button>
-              )}
+              {chargingPoints.map((point) => {
+                const isSelected = point.id === selectedPointId;
+                const isAvailable = point.status === "Disponible";
 
-              <Link
-                to={`/user/session/${station.id}`}
-                className="flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50"
+                return (
+                  <button
+                    key={point.id}
+                    type="button"
+                    onClick={() => isAvailable && setSelectedPointId(point.id)}
+                    disabled={!isAvailable}
+                    className={`w-full rounded-2xl border p-4 text-left transition-all ${
+                      !isAvailable
+                        ? "cursor-not-allowed border-slate-200 bg-slate-100 opacity-70"
+                        : isSelected
+                        ? "border-emerald-500 bg-emerald-50 ring-4 ring-emerald-500/10"
+                        : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-slate-900">{point.label}</div>
+                          {isSelected && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-700">
+                              <Check size={12} />
+                              Sélectionnée
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                            {point.connectorType}
+                          </span>
+                          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                            {point.powerKw} kW
+                          </span>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${
+                          point.status === "Disponible"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {point.status}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <button
+                onClick={handleContinueReservation}
+                disabled={!selectedPoint}
+                className="flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Ouvrir la session
-              </Link>
+                Continuer vers la réservation
+              </button>
 
               <Link
                 to="/user/dashboard"
@@ -368,8 +520,8 @@ export default function PlugDetails() {
             </div>
 
             <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
-              Conseil : affiche cette page avant <span className="font-bold">ReservationPage</span>
-              pour que l’utilisateur confirme d’abord la borne choisie.
+              La réservation se fait uniquement dans <span className="font-bold">ReservationPage</span>.
+              Ici, l’utilisateur choisit seulement la borne qui lui convient.
             </div>
           </div>
         </div>

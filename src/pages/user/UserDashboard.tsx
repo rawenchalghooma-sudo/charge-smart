@@ -2,16 +2,17 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
-  BatteryCharging,
-  CalendarDays,
   LayoutDashboard,
-  PlugZap,
   Search,
   ShieldCheck,
-  Zap,
   LogOut,
   User,
   MapPinned,
+  History,
+  Navigation,
+  PlugZap,
+  BatteryCharging,
+  Zap,
 } from "lucide-react";
 
 export default function UserDashboard() {
@@ -25,25 +26,8 @@ export default function UserDashboard() {
 
   const dashboardData = {
     userName: localStorage.getItem("user_full_name") || "Utilisateur",
-    activeSession: {
-      status: "Aucune session active",
-      subtitle: "Aucune charge en cours pour le moment",
-    },
-    nextReservation: {
-      station: "SolarPlug - Station Centre",
-      date: "07/03/2026",
-      time: "17:30",
-    },
-    stats: {
-      totalSessions: 8,
-      totalEnergy: "46.8 kWh",
-      totalSpent: "16.38 DT",
-    },
     recommendedStation: {
       id: "1",
-      name: "SolarPlug - Station Centre",
-      distance: "1.2 km",
-      status: "Disponible",
     },
   };
 
@@ -90,74 +74,57 @@ export default function UserDashboard() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-8">
-        <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-                Bienvenue
-              </p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-                Bonjour {dashboardData.userName}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 md:text-base">
-                Retrouvez ici vos sessions de recharge, vos informations
-                personnelles et la borne recommandée la plus utile pour démarrer.
-              </p>
-            </div>
+        <section className="rounded-[32px] border border-slate-200 bg-white px-8 py-10 shadow-sm md:px-12 md:py-12">
+          <div className="max-w-4xl">
+            <p className="text-sm font-bold uppercase tracking-[0.25em] text-slate-400">
+              Bienvenue
+            </p>
 
-            <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-5 py-4">
-              <div className="text-sm font-semibold text-emerald-700">
-                Borne recommandée
-              </div>
-              <div className="mt-1 text-lg font-black text-slate-900">
-                {dashboardData.recommendedStation.name}
-              </div>
-              <div className="mt-1 text-sm text-slate-600">
-                {dashboardData.recommendedStation.distance} •{" "}
-                {dashboardData.recommendedStation.status}
-              </div>
-              <Link
-                to={`/user/plug/${dashboardData.recommendedStation.id}`}
-                className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
-              >
-                Voir la borne
-                <ArrowRight size={16} />
-              </Link>
-            </div>
+            <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-900 md:text-6xl">
+              Bonjour{" "}
+              <span className="text-emerald-500">
+                {dashboardData.userName}
+              </span>
+            </h1>
+
+            <p className="mt-6 max-w-3xl text-base font-medium leading-8 text-slate-500 md:text-xl">
+              Retrouvez ici vos fonctionnalités de recharge, localisez les
+              bornes et gérez vos réservations simplement.
+            </p>
           </div>
         </section>
 
         <section className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
-            icon={<BatteryCharging size={18} />}
-            title="Session actuelle"
-            value={dashboardData.activeSession.status}
-            subtitle={dashboardData.activeSession.subtitle}
-            tone="slate"
-          />
-
-          <SummaryCard
-            icon={<CalendarDays size={18} />}
-            title="Prochaine réservation"
-            value={dashboardData.nextReservation.station}
-            subtitle={`${dashboardData.nextReservation.date} • ${dashboardData.nextReservation.time}`}
+          <StepVisualCard
+            icon={<Navigation size={28} />}
+            step="Étape 1"
+            title="Localiser"
+            description="Activez le GPS pour trouver rapidement les stations proches."
             tone="blue"
           />
 
-          <SummaryCard
-            icon={<MapPinned size={18} />}
-            title="Borne proche"
-            value={dashboardData.recommendedStation.distance}
-            subtitle={dashboardData.recommendedStation.name}
+          <StepVisualCard
+            icon={<MapPinned size={28} />}
+            step="Étape 2"
+            title="Voir détails"
+            description="Consultez les informations de la station et ses bornes disponibles."
+            tone="emerald"
+          />
+
+          <StepVisualCard
+            icon={<PlugZap size={28} />}
+            step="Étape 3"
+            title="Choisir borne"
+            description="Sélectionnez la borne adaptée selon vos critères."
             tone="amber"
           />
 
-          <SummaryCard
-            icon={<Zap size={18} />}
-            title="Énergie totale"
-            value={dashboardData.stats.totalEnergy}
-            subtitle={`Dépense totale : ${dashboardData.stats.totalSpent}`}
-            tone="emerald"
+          <StepVisualCard
+            icon={<BatteryCharging size={28} />}
+            step="Étape 4"
+            title="Réserver"
+            description="Choisissez votre créneau et confirmez la réservation."
+            tone="slate"
           />
         </section>
 
@@ -165,63 +132,69 @@ export default function UserDashboard() {
           <div>
             <h2 className="text-lg font-black text-slate-900">Accès rapide</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Ouvrez directement les pages les plus utiles de votre espace.
+              Accédez rapidement aux pages principales du parcours conducteur.
             </p>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
             <QuickLinkCard
-              to={`/user/plug/${dashboardData.recommendedStation.id}`}
+              to="/user/session/nearby"
               icon={<Search size={20} />}
-              title="Voir une borne"
-              description="Consulter les informations détaillées d’une borne avant réservation."
+              title="Stations proches"
+              description="Activer le GPS et afficher les stations proches."
             />
 
             <QuickLinkCard
-              to={`/user/session/${dashboardData.recommendedStation.id}`}
+              to="/user/network-stations"
+              icon={<Zap size={20} />}
+              title="Réseau des bornes"
+              description="Explorer toutes les bornes enregistrées dans différentes villes."
+            />
+
+            <QuickLinkCard
+              to={`/user/plug/${dashboardData.recommendedStation.id}`}
               icon={<MapPinned size={20} />}
-              title="Localisation & charge"
-              description="Suivre la charge et afficher les bornes proches avec GPS."
+              title="Voir détails station"
+              description="Consulter la station et les bornes disponibles."
+            />
+
+            <QuickLinkCard
+              to="/user/history"
+              icon={<History size={20} />}
+              title="Historique"
+              description="Retrouver vos réservations et votre historique."
             />
 
             <QuickLinkCard
               to="/user/profile"
               icon={<User size={20} />}
               title="Mon profil"
-              description="Consulter vos informations personnelles."
-            />
-
-            <QuickLinkCard
-              to="/"
-              icon={<PlugZap size={20} />}
-              title="Retour accueil"
-              description="Revenir vers la page principale de l’application."
+              description="Consulter et mettre à jour vos informations personnelles."
             />
           </div>
         </section>
 
-        <section className="mt-6 grid gap-5 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="text-sm font-bold text-slate-900">
-              Parcours utilisateur
+        <section className="mt-6">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+            <div className="flex items-center gap-4">
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <BatteryCharging size={26} />
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">
+                  Conseils du jour
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Quelques rappels utiles avant de réserver et recharger.
+                </p>
+              </div>
             </div>
 
-            <div className="mt-4 space-y-3 text-sm">
-              <SimpleFlowRow step="1" label="Voir une borne" />
-              <SimpleFlowRow step="2" label="Localisation & charge" />
-              <SimpleFlowRow step="3" label="Consulter mon profil" />
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="text-sm font-bold text-slate-900">
-              Informations utiles
-            </div>
-
-            <div className="mt-4 text-sm leading-relaxed text-slate-600">
-              Ce dashboard sert de point d’entrée principal pour le conducteur.
-              Il donne une vue rapide sur les actions importantes sans répéter
-              tous les détails déjà affichés dans les autres pages.
+            <div className="mt-8 space-y-5">
+              <AdviceRow text="Réservez 15 min à l'avance pour garantir la disponibilité." />
+              <AdviceRow text="Utilisez les bornes AC pour préserver la santé de votre batterie la nuit." />
+              <AdviceRow text="Vérifiez le type de connecteur (Type 2 ou CCS) avant de partir." />
             </div>
           </div>
         </section>
@@ -230,51 +203,43 @@ export default function UserDashboard() {
   );
 }
 
-function SummaryCard({
+function StepVisualCard({
   icon,
+  step,
   title,
-  value,
-  subtitle,
+  description,
   tone,
 }: {
   icon: React.ReactNode;
+  step: string;
   title: string;
-  value: string;
-  subtitle: string;
-  tone: "slate" | "blue" | "amber" | "emerald";
+  description: string;
+  tone: "blue" | "emerald" | "amber" | "slate";
 }) {
   const tones = {
-    slate: {
-      box: "bg-white border-slate-200",
-      icon: "bg-slate-100 text-slate-700",
-    },
-    blue: {
-      box: "bg-white border-slate-200",
-      icon: "bg-blue-100 text-blue-700",
-    },
-    amber: {
-      box: "bg-white border-slate-200",
-      icon: "bg-amber-100 text-amber-700",
-    },
-    emerald: {
-      box: "bg-white border-slate-200",
-      icon: "bg-emerald-100 text-emerald-700",
-    },
+    blue: "from-blue-50 to-white border-blue-100 text-blue-700",
+    emerald: "from-emerald-50 to-white border-emerald-100 text-emerald-700",
+    amber: "from-amber-50 to-white border-amber-100 text-amber-700",
+    slate: "from-slate-50 to-white border-slate-200 text-slate-700",
   };
 
   return (
-    <div className={`rounded-3xl border p-6 shadow-sm ${tones[tone].box}`}>
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-bold text-slate-900">{title}</div>
-        <div
-          className={`grid h-10 w-10 place-items-center rounded-2xl ${tones[tone].icon}`}
-        >
+    <div
+      className={`rounded-3xl border bg-gradient-to-br p-6 shadow-sm ${tones[tone]}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-sm">
           {icon}
         </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm">
+          {step}
+        </span>
       </div>
 
-      <div className="mt-4 text-xl font-black text-slate-900">{value}</div>
-      <div className="mt-2 text-sm text-slate-500">{subtitle}</div>
+      <div className="mt-5 text-lg font-black text-slate-900">{title}</div>
+      <div className="mt-2 text-sm leading-relaxed text-slate-600">
+        {description}
+      </div>
     </div>
   );
 }
@@ -314,19 +279,16 @@ function QuickLinkCard({
   );
 }
 
-function SimpleFlowRow({
-  step,
-  label,
-}: {
-  step: string;
-  label: string;
-}) {
+function AdviceRow({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-      <div className="grid h-8 w-8 place-items-center rounded-full bg-slate-900 text-xs font-bold text-white">
-        {step}
+    <div className="flex items-start gap-4">
+      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
+        <ShieldCheck size={16} />
       </div>
-      <span className="font-medium text-slate-700">{label}</span>
+
+      <p className="pt-1 text-base font-medium leading-relaxed text-slate-700">
+        {text}
+      </p>
     </div>
   );
 }

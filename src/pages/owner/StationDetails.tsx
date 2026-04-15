@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -14,75 +15,27 @@ import {
   LogOut,
 } from "lucide-react";
 
-type StationStatus = "Disponible" | "Occupée" | "Maintenance";
+type StationStatus = "Disponible" | "Occupée" | "Hors ligne" | "Inconnu";
 
 type Station = {
-  id: string;
+  id: number;
   name: string;
   location: string;
   status: StationStatus;
-  power: string;
-  connector: string;
-  battery: string;
-  energySource: string;
-  solarProduction: string;
-  reservations: number;
-  sessions: number;
-};
-
-const stations: Record<string, Station> = {
-  "1": {
-    id: "1",
-    name: "Solar Station Tunis 01",
-    location: "Tunis Centre",
-    status: "Disponible",
-    power: "22 kW",
-    connector: "Type 2 / CCS",
-    battery: "84%",
-    energySource: "Solaire + Batterie",
-    solarProduction: "58 kWh",
-    reservations: 12,
-    sessions: 48,
-  },
-  "2": {
-    id: "2",
-    name: "Solar Station Sfax 02",
-    location: "Route de l’Aéroport",
-    status: "Occupée",
-    power: "50 kW",
-    connector: "CCS",
-    battery: "67%",
-    energySource: "Solaire + Réseau",
-    solarProduction: "74 kWh",
-    reservations: 18,
-    sessions: 73,
-  },
-  "3": {
-    id: "3",
-    name: "Solar Station Sousse 03",
-    location: "Zone Touristique",
-    status: "Maintenance",
-    power: "22 kW",
-    connector: "Type 2",
-    battery: "41%",
-    energySource: "Batterie + Réseau",
-    solarProduction: "31 kWh",
-    reservations: 7,
-    sessions: 29,
-  },
-  "4": {
-    id: "4",
-    name: "Solar Station Nabeul 04",
-    location: "Nabeul Ville",
-    status: "Disponible",
-    power: "43 kW",
-    connector: "CCS / Type 2",
-    battery: "92%",
-    energySource: "Solaire",
-    solarProduction: "81 kWh",
-    reservations: 20,
-    sessions: 95,
-  },
+  power_kw: number | string;
+  energy_source: string;
+  station_battery: number | string;
+  price_per_kwh?: number;
+  is_active?: boolean;
+  connector?: string;
+  solar_production?: number;
+  energy_battery_level?: number;
+  grid_usage?: number;
+  consumption?: number;
+  ems_mode?: string;
+  reservations?: number;
+  sessions?: number;
+  last_recorded_at?: string | null;
 };
 
 function getStatusClass(status: StationStatus) {
@@ -136,9 +89,12 @@ function HistoryItem({
 }
 
 export default function StationDetails() {
-  const navigate = useNavigate();
   const { id } = useParams();
-  const station = id ? stations[id] : undefined;
+  const navigate = useNavigate();
+
+  const [station, setStation] = useState<Station | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const handleLogout = () => {
     localStorage.clear();
@@ -146,7 +102,52 @@ export default function StationDetails() {
     navigate("/owner/login");
   };
 
-  if (!station) {
+  useEffect(() => {
+    const fetchStation = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await fetch(`http://localhost:5000/api/stations/${id}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error("Station introuvable");
+          }
+          throw new Error("Erreur lors du chargement de la station");
+        }
+
+        const data = await response.json();
+        setStation(data);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Impossible de charger la station.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchStation();
+    } else {
+      setError("Identifiant de station invalide.");
+      setLoading(false);
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] p-8">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <h1 className="text-2xl font-black text-slate-900">
+            Chargement de la station...
+          </h1>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !station) {
     return (
       <div className="min-h-screen bg-[#f8fafc] p-8">
         <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
@@ -154,7 +155,7 @@ export default function StationDetails() {
             Station introuvable
           </h1>
           <p className="mt-3 text-slate-500">
-            La borne demandée n’existe pas ou n’est plus disponible.
+            {error || "La borne demandée n’existe pas ou n’est plus disponible."}
           </p>
           <Link
             to="/owner/stations"
@@ -167,9 +168,18 @@ export default function StationDetails() {
     );
   }
 
+  const connector = station.connector || "Non renseigné";
+  const solarProduction = `${station.solar_production ?? 0} kWh`;
+  const reservations = station.reservations ?? 0;
+  const sessions = station.sessions ?? 0;
+  const batteryValue = `${station.station_battery}%`;
+  const powerValue = `${station.power_kw} kW`;
+  const emsMode = station.ems_mode || "Non défini";
+  const gridUsage = `${station.grid_usage ?? 0} kWh`;
+  const consumption = `${station.consumption ?? 0} kWh`;
+
   return (
     <div className="min-h-screen bg-[#f8fafc]">
-      {/* Header */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
@@ -186,18 +196,20 @@ export default function StationDetails() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              to="/owner/stations"
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/owner/stations")}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               <ArrowLeft size={16} />
               Retour bornes
-            </Link>
+            </button>
 
             <button
+              type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-100"
             >
               <LogOut size={16} />
               Déconnexion
@@ -207,7 +219,6 @@ export default function StationDetails() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8">
-        {/* Top intro */}
         <section className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -236,23 +247,26 @@ export default function StationDetails() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100"
+            >
               <Wrench size={16} />
               Maintenance
             </button>
 
-            <button className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-100">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-100"
+            >
               <Power size={16} />
               Désactiver
             </button>
           </div>
         </section>
 
-        {/* Main grid */}
         <section className="grid gap-8 lg:grid-cols-3">
-          {/* Left content */}
           <div className="space-y-8 lg:col-span-2">
-            {/* Technical details */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900">
                 Fiche technique
@@ -262,27 +276,27 @@ export default function StationDetails() {
                 <InfoCard
                   icon={<Zap size={18} />}
                   title="Puissance"
-                  value={station.power}
+                  value={powerValue}
                 />
                 <InfoCard
                   icon={<PlugZap size={18} />}
                   title="Connecteur"
-                  value={station.connector}
+                  value={connector}
                 />
                 <InfoCard
                   icon={<BatteryCharging size={18} />}
                   title="Batterie"
-                  value={station.battery}
+                  value={batteryValue}
                 />
                 <InfoCard
                   icon={<BarChart3 size={18} />}
                   title="Source énergie"
-                  value={station.energySource}
+                  value={station.energy_source}
                 />
                 <InfoCard
                   icon={<Sun size={18} />}
                   title="Production solaire"
-                  value={station.solarProduction}
+                  value={solarProduction}
                 />
                 <InfoCard
                   icon={<MapPin size={18} />}
@@ -292,7 +306,6 @@ export default function StationDetails() {
               </div>
             </div>
 
-            {/* Activity history */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-slate-900">
@@ -308,25 +321,28 @@ export default function StationDetails() {
 
               <div className="space-y-4">
                 <HistoryItem
-                  title="Session terminée — 14.2 kWh"
-                  time="Aujourd’hui • 10:42"
-                  type="Session"
-                />
-                <HistoryItem
-                  title="Réservation confirmée"
-                  time="Aujourd’hui • 09:15"
+                  title={`Réservations enregistrées : ${reservations}`}
+                  time="Compteur synchronisé avec le backend"
                   type="Réservation"
                 />
                 <HistoryItem
-                  title="Contrôle batterie effectué"
-                  time="Hier • 17:30"
-                  type="Maintenance"
+                  title={`Sessions enregistrées : ${sessions}`}
+                  time="Compteur synchronisé avec le backend"
+                  type="Session"
+                />
+                <HistoryItem
+                  title={`Dernier mode EMS : ${emsMode}`}
+                  time={
+                    station.last_recorded_at
+                      ? new Date(station.last_recorded_at).toLocaleString()
+                      : "Aucune métrique récente"
+                  }
+                  type="Énergie"
                 />
               </div>
             </div>
           </div>
 
-          {/* Right sidebar */}
           <div className="space-y-8">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900">
@@ -342,7 +358,7 @@ export default function StationDetails() {
                     </span>
                   </div>
                   <p className="text-2xl font-black text-slate-900">
-                    {station.reservations}
+                    {reservations}
                   </p>
                 </div>
 
@@ -354,7 +370,7 @@ export default function StationDetails() {
                     </span>
                   </div>
                   <p className="text-2xl font-black text-slate-900">
-                    {station.sessions}
+                    {sessions}
                   </p>
                 </div>
 
@@ -366,7 +382,7 @@ export default function StationDetails() {
                     </span>
                   </div>
                   <p className="text-2xl font-black text-slate-900">
-                    {station.battery}
+                    {batteryValue}
                   </p>
                 </div>
               </div>
@@ -380,20 +396,36 @@ export default function StationDetails() {
               <h3 className="text-lg font-bold">État énergétique</h3>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 La borne fonctionne avec une gestion énergétique optimisée et une
-                intégration solaire active.
+                intégration de la source d’énergie configurée dans le backend.
               </p>
 
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
                   <span className="text-sm text-slate-300">Source dominante</span>
                   <span className="text-sm font-bold text-emerald-300">
-                    Solaire
+                    {station.energy_source}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
                   <span className="text-sm text-slate-300">Mode EMS</span>
-                  <span className="text-sm font-bold text-amber-300">ECO</span>
+                  <span className="text-sm font-bold text-amber-300">
+                    {emsMode}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
+                  <span className="text-sm text-slate-300">Utilisation réseau</span>
+                  <span className="text-sm font-bold text-white">
+                    {gridUsage}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
+                  <span className="text-sm text-slate-300">Consommation</span>
+                  <span className="text-sm font-bold text-white">
+                    {consumption}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">

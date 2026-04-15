@@ -8,8 +8,10 @@ import Signup from "./pages/Signup";
 /* USER */
 import UserLogin from "./pages/user/UserLogin";
 import UserDashboard from "./pages/user/UserDashboard";
+import NetworkStations from "./pages/user/NetworkStations";
 import PlugDetails from "./pages/user/PlugDetails";
 import ReservationPage from "./pages/user/ReservationPage";
+import ReservationQRCode from "./pages/user/ReservationQRCode";
 import ChargingSession from "./pages/user/ChargingSession";
 import UserHistory from "./pages/user/UserHistory";
 import UserProfile from "./pages/user/UserProfile";
@@ -18,6 +20,7 @@ import UserProfile from "./pages/user/UserProfile";
 import OwnerLogin from "./pages/owner/OwnerLogin";
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import StationsManagement from "./pages/owner/StationsManagement";
+import AddStation from "./pages/owner/AddStation";
 import StationDetails from "./pages/owner/StationDetails";
 import ReservationsManagement from "./pages/owner/ReservationsManagement";
 import ChargingSessionsManagement from "./pages/owner/ChargingSessionsManagement";
@@ -52,35 +55,42 @@ function NotFound() {
 export default function App() {
   return (
     <Routes>
+      {/* HOME */}
       <Route path="/" element={<Home />} />
-
       <Route path="/login" element={<LoginSelector />} />
       <Route path="/signup" element={<Signup />} />
 
+      {/* USER */}
       <Route path="/user/login" element={<UserLogin />} />
       <Route path="/user/dashboard" element={<UserDashboard />} />
+      <Route path="/user/network-stations" element={<NetworkStations />} />
       <Route path="/user/history" element={<UserHistory />} />
       <Route path="/user/profile" element={<UserProfile />} />
       <Route path="/user/plug/:id" element={<PlugDetails />} />
       <Route path="/user/reserve/:id" element={<ReservationPage />} />
+      <Route path="/user/reservation-qr/:id" element={<ReservationQRCode />} />
       <Route path="/user/session/:id" element={<ChargingSession />} />
       <Route path="/user" element={<Navigate to="/user/login" replace />} />
 
+      {/* OWNER */}
       <Route path="/owner/login" element={<OwnerLogin />} />
       <Route path="/owner/dashboard" element={<OwnerDashboard />} />
       <Route path="/owner/stations" element={<StationsManagement />} />
+      <Route path="/owner/stations/new" element={<AddStation />} />
       <Route path="/owner/station/:id" element={<StationDetails />} />
       <Route path="/owner/reservations" element={<ReservationsManagement />} />
       <Route path="/owner/sessions" element={<ChargingSessionsManagement />} />
       <Route path="/owner/energy" element={<EnergyMonitoring />} />
       <Route path="/owner" element={<Navigate to="/owner/login" replace />} />
 
+      {/* ADMIN */}
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/users" element={<UsersManagement />} />
       <Route path="/admin/system" element={<SystemMonitoring />} />
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
 
+      {/* 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Activity,
   ArrowLeft,
@@ -9,7 +9,6 @@ import {
   Search,
   User,
   Zap,
-  LogOut,
 } from "lucide-react";
 
 type SessionStatus = "Active" | "Terminée";
@@ -159,14 +158,6 @@ function SessionCard({ session }: { session: ChargingSession }) {
 }
 
 export default function ChargingSessionsManagement() {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/owner/login");
-  };
-
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       {/* Header */}
@@ -186,23 +177,13 @@ export default function ChargingSessionsManagement() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              to="/owner/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <ArrowLeft size={16} />
-              Retour dashboard
-            </Link>
-
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-            >
-              <LogOut size={16} />
-              Déconnexion
-            </button>
-          </div>
+          <Link
+            to="/owner/dashboard"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <ArrowLeft size={16} />
+            Retour dashboard
+          </Link>
         </div>
       </header>
 

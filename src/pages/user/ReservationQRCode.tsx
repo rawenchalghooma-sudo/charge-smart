@@ -8,6 +8,7 @@ import {
   History,
   LogOut,
   QrCode,
+  Zap,
 } from "lucide-react";
 
 export default function ReservationQRCode() {
@@ -21,32 +22,35 @@ export default function ReservationQRCode() {
   const station = state?.station;
   const selectedChargingPoint = state?.selectedChargingPoint;
 
-  const qrCodeId =
-    reservation?.qrCodeId || `SP-USER-${reservation?.userId || "UNKNOWN"}-RES-${id}`;
+  // =============================================
+  // QR FORMAT : R{id}_{urgency}
+  // Exemple : R18_85  → id=18, urgency=85
+  // Ce code est scanné par la caméra ESP32-S3
+  // L'IA embarquée extrait urgency directement
+  // =============================================
+  const qrCodeId = reservation?.qrCodeId || `R${id}_5`;
+
+  // Parser le QR pour afficher les détails
+  const qrParts = qrCodeId.match(/^R(\d+)_(\d+)$/);
+  const reservationIdFromQr = qrParts ? qrParts[1] : String(id);
+  const urgencyFromQr       = qrParts ? parseInt(qrParts[2]) : 5;
+
+  // Couleur et label selon le score d'urgence
+  const getUrgencyStyle = (score: number) => {
+    if (score >= 85) return { color: "text-red-700",    bg: "bg-red-50",    border: "border-red-200",    label: "CRITIQUE",  dot: "bg-red-500"    };
+    if (score >= 65) return { color: "text-orange-700", bg: "bg-orange-50", border: "border-orange-200", label: "HAUTE",     dot: "bg-orange-500" };
+    if (score >= 40) return { color: "text-yellow-700", bg: "bg-yellow-50", border: "border-yellow-200", label: "MOYENNE",   dot: "bg-yellow-500" };
+    if (score >= 20) return { color: "text-blue-700",   bg: "bg-blue-50",   border: "border-blue-200",   label: "FAIBLE",    dot: "bg-blue-500"   };
+    return               { color: "text-slate-700",  bg: "bg-slate-50",  border: "border-slate-200",  label: "TRÈS FAIBLE", dot: "bg-slate-400" };
+  };
+
+  const urgencyStyle = getUrgencyStyle(urgencyFromQr);
 
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
     navigate("/user/login");
   };
-
-  const qrData = JSON.stringify({
-    qrCodeId,
-    userId: reservation?.userId,
-    reservationId: id,
-    stationId: reservation?.stationId,
-    stationName: station?.name,
-    borne: selectedChargingPoint?.label,
-    connector: selectedChargingPoint?.connectorType,
-    powerKw: selectedChargingPoint?.powerKw,
-    vehicleType: state?.vehicleType,
-    date: state?.date,
-    time: state?.time,
-    durationMin: state?.durationMin,
-    estimatedKwh: state?.estimatedKwh,
-    estimatedCost: state?.estimatedCost,
-    status: reservation?.status,
-  });
 
   const downloadQRCode = () => {
     const canvas = document.getElementById("reservation-qr") as HTMLCanvasElement;
@@ -66,6 +70,7 @@ export default function ReservationQRCode() {
 
   return (
     <div className="relative min-h-screen bg-[#f8fafc] text-slate-900">
+      {/* ── Header ── */}
       <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
@@ -97,6 +102,8 @@ export default function ReservationQRCode() {
 
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+
+          {/* ── Colonne gauche : QR ── */}
           <div className="rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-emerald-100 text-emerald-700">
               <QrCode size={30} />
@@ -107,25 +114,54 @@ export default function ReservationQRCode() {
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              Présentez ce QR code à la borne pour identifier votre réservation.
+              Présentez ce QR code à la borne. La caméra ESP32-S3 lira
+              automatiquement votre ID et le score d'urgence pour l'IA.
             </p>
 
-            <div className="mt-8 flex justify-center rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            {/* QR Code */}
+            <div className="mt-8 flex justify-center rounded-3xl border border-slate-200 bg-white p-6">
               <QRCodeCanvas
                 id="reservation-qr"
-                value={qrData}
-                size={220}
-                level="H"
-                includeMargin
+                value={qrCodeId}
+                size={300}
+                level="M"
+                includeMargin={true}
               />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+            {/* Badge QR décodé */}
+            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-left">
               <p className="text-xs font-semibold text-emerald-700">
-                ID QR spécifique
+                Contenu du QR (lu par ESP32-S3)
               </p>
-              <p className="mt-1 break-all text-sm font-black text-slate-900">
+              <p className="mt-1 break-all text-xl font-black text-slate-900">
                 {qrCodeId}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-600">
+                <span>
+                  🔢 ID réservation :{" "}
+                  <strong className="text-slate-900">#{reservationIdFromQr}</strong>
+                </span>
+                <span>
+                  ⚡ Urgency :{" "}
+                  <strong className="text-slate-900">{urgencyFromQr} / 100</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Badge urgence visuel */}
+            <div
+              className={`mt-3 rounded-2xl border px-4 py-3 text-left ${urgencyStyle.bg} ${urgencyStyle.border}`}
+            >
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${urgencyStyle.dot}`} />
+                <p className={`text-xs font-bold ${urgencyStyle.color}`}>
+                  Niveau d'urgence IA : {urgencyStyle.label}
+                </p>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Ce score est transmis directement à l'IA embarquée (logique floue)
+                pour décider la puissance et la source de recharge.
               </p>
             </div>
 
@@ -138,6 +174,7 @@ export default function ReservationQRCode() {
             </button>
           </div>
 
+          {/* ── Colonne droite : Détails ── */}
           <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="text-emerald-600" size={24} />
@@ -147,10 +184,15 @@ export default function ReservationQRCode() {
             </div>
 
             <div className="mt-6 grid gap-3">
-              <InfoRow label="ID QR" value={qrCodeId} />
-              <InfoRow label="Numéro réservation" value={`#${id}`} />
-              <InfoRow label="Station" value={station?.name || "Station"} />
-              <InfoRow label="Borne" value={selectedChargingPoint?.label || "—"} />
+              <InfoRow label="Code QR"              value={qrCodeId} />
+              <InfoRow label="Numéro réservation"   value={`#${reservationIdFromQr}`} />
+              <InfoRow
+                label="Score d'urgence (IA)"
+                value={`${urgencyFromQr} / 100 — ${urgencyStyle.label}`}
+                highlight={urgencyFromQr >= 65}
+              />
+              <InfoRow label="Station"              value={station?.name || "Station"} />
+              <InfoRow label="Borne"                value={selectedChargingPoint?.label || "—"} />
               <InfoRow
                 label="Connecteur"
                 value={selectedChargingPoint?.connectorType || "—"}
@@ -159,10 +201,10 @@ export default function ReservationQRCode() {
                 label="Puissance"
                 value={`${selectedChargingPoint?.powerKw || station?.power_kw || 0} kW`}
               />
-              <InfoRow label="Type voiture" value={state?.vehicleType || "—"} />
-              <InfoRow label="Date" value={state?.date || "—"} />
-              <InfoRow label="Heure" value={state?.time || "—"} />
-              <InfoRow label="Durée" value={`${state?.durationMin || 0} minutes`} />
+              <InfoRow label="Type voiture"         value={state?.vehicleType || "—"} />
+              <InfoRow label="Date"                 value={state?.date || "—"} />
+              <InfoRow label="Heure"                value={state?.time || "—"} />
+              <InfoRow label="Durée"                value={`${state?.durationMin || 0} minutes`} />
               <InfoRow
                 label="Énergie estimée"
                 value={`${Number(state?.estimatedKwh || 0).toFixed(1)} kWh`}
@@ -171,6 +213,23 @@ export default function ReservationQRCode() {
                 label="Coût estimé"
                 value={`${Number(state?.estimatedCost || 0).toFixed(2)} DT`}
               />
+            </div>
+
+            {/* Info ESP32 */}
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+              <div className="flex items-start gap-2">
+                <Zap size={16} className="mt-0.5 text-blue-600" />
+                <div>
+                  <p className="text-xs font-bold text-blue-700">
+                    Flux IA embarquée (ESP32-S3)
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Scan QR → extrait <strong>id={reservationIdFromQr}</strong> et{" "}
+                    <strong>urgency={urgencyFromQr}</strong> → POST /predict →
+                    logique floue → décision recharge
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="mt-7 flex flex-wrap gap-3">
@@ -190,17 +249,37 @@ export default function ReservationQRCode() {
               </Link>
             </div>
           </div>
+
         </div>
       </main>
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+// ── InfoRow ──
+function InfoRow({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <div
+      className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${
+        highlight
+          ? "border-orange-200 bg-orange-50"
+          : "border-slate-200 bg-slate-50"
+      }`}
+    >
       <span className="text-sm font-semibold text-slate-500">{label}</span>
-      <span className="break-all text-right text-sm font-black text-slate-900">
+      <span
+        className={`break-all text-right text-sm font-black ${
+          highlight ? "text-orange-700" : "text-slate-900"
+        }`}
+      >
         {value}
       </span>
     </div>

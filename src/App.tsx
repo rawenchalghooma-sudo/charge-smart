@@ -11,7 +11,7 @@ import UserDashboard from "./pages/user/UserDashboard";
 import NetworkStations from "./pages/user/NetworkStations";
 import PlugDetails from "./pages/user/PlugDetails";
 import ReservationPage from "./pages/user/ReservationPage";
-import ReservationQRCode from "./pages/user/ReservationQRCode";
+import ReservationQRCode from "./pages/user/ReservationQRCode.tsx";
 import ChargingSession from "./pages/user/ChargingSession";
 import UserHistory from "./pages/user/UserHistory";
 import UserProfile from "./pages/user/UserProfile";

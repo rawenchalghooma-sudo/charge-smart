@@ -1,7 +1,36 @@
 const { Reservation, Station, User } = require("../models");
 
+// =========================
+// HELPER - Calculer urgency
+// =========================
+const computeUrgency = (reservationDate, startTime) => {
+  const reservationDateTime = new Date(`${reservationDate}T${startTime}`);
+  const now = new Date();
+  const minutesUntil = (reservationDateTime - now) / (1000 * 60);
+
+  if (minutesUntil <= 0)        return 100; // déjà en retard
+  if (minutesUntil <= 15)       return 100;
+  if (minutesUntil <= 30)       return 85;
+  if (minutesUntil <= 60)       return 65;
+  if (minutesUntil <= 120)      return 40;
+  if (minutesUntil <= 240)      return 20;
+  return 5;
+};
+
+// =========================
+// USER - Créer une réservation
+// =========================
 const createReservation = async (req, res) => {
   try {
+    console.log("USER:", req.user);
+    console.log("BODY:", req.body);
+
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        message: "Utilisateur non authentifié. Token manquant ou invalide.",
+      });
+    }
+
     const userId = req.user.id;
 
     const {
@@ -35,13 +64,23 @@ const createReservation = async (req, res) => {
       reservationDate,
       startTime,
       endTime,
-      estimatedKwh,
-      estimatedCost,
-      vehicleType,
+      estimatedKwh: estimatedKwh || 0,
+      estimatedCost: estimatedCost || 0,
+      vehicleType: vehicleType || "electric",
       status: "pending",
     });
 
-    reservation.qrCodeId = `SP-USER-${userId}-RES-${reservation.id}-${Date.now()}`;
+    // =============================================
+    // QR CODE FORMAT : ID:{id} | URGENCY:{urgency}
+    // Exemple : ID:18 | URGENCY:85
+    //   18  = id de la réservation
+    //   85  = score d'urgence (0-100) pour l'IA embarquée
+    // Lisible directement par n'importe quelle caméra
+    // =============================================
+    const urgencyScore = computeUrgency(reservationDate, startTime);
+    const qrCodeId = `ID:${reservation.id} | URGENCY:${urgencyScore}`;
+
+    reservation.qrCodeId = qrCodeId;
     await reservation.save();
 
     return res.status(201).json({
@@ -49,13 +88,19 @@ const createReservation = async (req, res) => {
       reservation,
     });
   } catch (error) {
-    console.error("Erreur createReservation :", error);
+    console.error("Erreur createReservation :", error.message);
+    console.error("MYSQL ERROR :", error.parent?.sqlMessage);
+    console.error("SQL :", error.parent?.sql);
+
     return res.status(500).json({
-      message: "Erreur serveur lors de la création de la réservation.",
+      message: error.parent?.sqlMessage || error.message,
     });
   }
 };
 
+// =========================
+// USER - Mes réservations
+// =========================
 const getMyReservations = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -72,13 +117,18 @@ const getMyReservations = async (req, res) => {
 
     return res.status(200).json(reservations);
   } catch (error) {
-    console.error("Erreur getMyReservations :", error);
+    console.error("Erreur getMyReservations :", error.message);
+    console.error("MYSQL ERROR :", error.parent?.sqlMessage);
+
     return res.status(500).json({
-      message: "Erreur serveur lors de la récupération des réservations.",
+      message: error.parent?.sqlMessage || error.message,
     });
   }
 };
 
+// =========================
+// USER - Réservation par ID
+// =========================
 const getReservationById = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -104,13 +154,18 @@ const getReservationById = async (req, res) => {
 
     return res.status(200).json(reservation);
   } catch (error) {
-    console.error("Erreur getReservationById :", error);
+    console.error("Erreur getReservationById :", error.message);
+    console.error("MYSQL ERROR :", error.parent?.sqlMessage);
+
     return res.status(500).json({
-      message: "Erreur serveur lors de la récupération de la réservation.",
+      message: error.parent?.sqlMessage || error.message,
     });
   }
 };
 
+// =========================
+// USER - Annuler réservation
+// =========================
 const cancelReservation = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -137,17 +192,18 @@ const cancelReservation = async (req, res) => {
       reservation,
     });
   } catch (error) {
-    console.error("Erreur cancelReservation :", error);
+    console.error("Erreur cancelReservation :", error.message);
+    console.error("MYSQL ERROR :", error.parent?.sqlMessage);
+
     return res.status(500).json({
-      message: "Erreur serveur lors de l'annulation de la réservation.",
+      message: error.parent?.sqlMessage || error.message,
     });
   }
 };
 
 // =========================
-// OWNER
+// OWNER - Voir réservations
 // =========================
-
 const getOwnerReservations = async (req, res) => {
   try {
     const ownerId = req.user.id;
@@ -169,14 +225,18 @@ const getOwnerReservations = async (req, res) => {
 
     return res.status(200).json(reservations);
   } catch (error) {
-    console.error("Erreur getOwnerReservations :", error);
+    console.error("Erreur getOwnerReservations :", error.message);
+    console.error("MYSQL ERROR :", error.parent?.sqlMessage);
+
     return res.status(500).json({
-      message:
-        "Erreur serveur lors de la récupération des réservations du propriétaire.",
+      message: error.parent?.sqlMessage || error.message,
     });
   }
 };
 
+// =========================
+// OWNER - Confirmer réservation
+// =========================
 const confirmReservationByOwner = async (req, res) => {
   try {
     const ownerId = req.user.id;
@@ -206,13 +266,18 @@ const confirmReservationByOwner = async (req, res) => {
       reservation,
     });
   } catch (error) {
-    console.error("Erreur confirmReservationByOwner :", error);
+    console.error("Erreur confirmReservationByOwner :", error.message);
+    console.error("MYSQL ERROR :", error.parent?.sqlMessage);
+
     return res.status(500).json({
-      message: "Erreur serveur lors de la confirmation de la réservation.",
+      message: error.parent?.sqlMessage || error.message,
     });
   }
 };
 
+// =========================
+// OWNER - Annuler réservation
+// =========================
 const cancelReservationByOwner = async (req, res) => {
   try {
     const ownerId = req.user.id;
@@ -242,9 +307,11 @@ const cancelReservationByOwner = async (req, res) => {
       reservation,
     });
   } catch (error) {
-    console.error("Erreur cancelReservationByOwner :", error);
+    console.error("Erreur cancelReservationByOwner :", error.message);
+    console.error("MYSQL ERROR :", error.parent?.sqlMessage);
+
     return res.status(500).json({
-      message: "Erreur serveur lors de l'annulation de la réservation.",
+      message: error.parent?.sqlMessage || error.message,
     });
   }
 };

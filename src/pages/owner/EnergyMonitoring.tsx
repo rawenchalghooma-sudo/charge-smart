@@ -1,13 +1,13 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   Sun,
   BatteryCharging,
   Zap,
   Gauge,
+  BarChart3,
   Leaf,
   Cpu,
-  LogOut,
 } from "lucide-react";
 
 type MetricCardProps = {
@@ -91,14 +91,6 @@ function DecisionCard({ mode, desc, className }: DecisionCardProps) {
 }
 
 export default function EnergyMonitoring() {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/owner/login");
-  };
-
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
@@ -117,23 +109,13 @@ export default function EnergyMonitoring() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              to="/owner/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <ArrowLeft size={16} />
-              Retour dashboard
-            </Link>
-
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-            >
-              <LogOut size={16} />
-              Déconnexion
-            </button>
-          </div>
+          <Link
+            to="/owner/dashboard"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <ArrowLeft size={16} />
+            Retour dashboard
+          </Link>
         </div>
       </header>
 

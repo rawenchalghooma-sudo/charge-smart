@@ -11,6 +11,7 @@ import {
   CircleX,
   PlugZap,
   Bolt,
+  Route,
 } from "lucide-react";
 
 type Station = {
@@ -29,7 +30,10 @@ function toRad(x: number) {
   return (x * Math.PI) / 180;
 }
 
-function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+function distanceKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+) {
   const R = 6371;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
@@ -52,12 +56,19 @@ export default function ChargingSession() {
 
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
-  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(
+    null
+  );
 
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
     navigate("/user/login");
+  };
+
+  const openGoogleMapsRoute = (lat: number, lng: number) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, "_blank");
   };
 
   useEffect(() => {
@@ -92,6 +103,13 @@ export default function ChargingSession() {
     if (!userPos) return [];
 
     return stations
+      .filter(
+        (station) =>
+          typeof station.lat === "number" &&
+          typeof station.lng === "number" &&
+          !Number.isNaN(station.lat) &&
+          !Number.isNaN(station.lng)
+      )
       .map((station) => ({
         ...station,
         distance: distanceKm(userPos, { lat: station.lat, lng: station.lng }),
@@ -144,12 +162,6 @@ export default function ChargingSession() {
 
   return (
     <div className="relative min-h-screen bg-[#f8fafc] text-slate-900">
-      <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-[12%] -left-[10%] h-[40%] w-[40%] rounded-full bg-amber-200/20 blur-[120px]" />
-        <div className="absolute top-[20%] -right-[12%] h-[40%] w-[40%] rounded-full bg-emerald-200/20 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[35%] h-[40%] w-[40%] rounded-full bg-blue-200/20 blur-[120px]" />
-      </div>
-
       <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
@@ -162,9 +174,11 @@ export default function ChargingSession() {
             </Link>
 
             <div>
-              <div className="text-sm font-bold text-slate-900">Stations proches</div>
+              <div className="text-sm font-bold text-slate-900">
+                Stations proches
+              </div>
               <div className="text-xs text-slate-500">
-                GPS → station → détails → choix de borne
+                GPS → station → itinéraire → choix de borne
               </div>
             </div>
           </div>
@@ -194,7 +208,8 @@ export default function ChargingSession() {
                 Trouver la station la plus proche
               </div>
               <div className="mt-1 text-sm text-slate-500">
-                Active le GPS pour afficher les stations les plus proches puis consulter leurs détails.
+                Active le GPS pour afficher les stations proches et ouvrir le
+                trajet avec Google Maps.
               </div>
             </div>
 
@@ -225,7 +240,9 @@ export default function ChargingSession() {
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
               <div className="mb-4 flex items-center gap-2">
                 <MapPin size={18} className="text-blue-600" />
-                <span className="text-sm font-bold text-slate-900">Zone GPS</span>
+                <span className="text-sm font-bold text-slate-900">
+                  Zone GPS
+                </span>
               </div>
 
               {!userPos ? (
@@ -273,7 +290,8 @@ export default function ChargingSession() {
                     </div>
 
                     <div className="mt-5 text-xs text-slate-500">
-                      Carte visuelle simulée. Plus tard tu peux intégrer une vraie map.
+                      Cliquez sur “Voir itinéraire” pour ouvrir Google Maps et
+                      suivre le chemin vers la station.
                     </div>
                   </div>
                 </div>
@@ -282,24 +300,24 @@ export default function ChargingSession() {
 
             <div className="space-y-4">
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                <div className="text-sm font-bold text-slate-900">Votre position</div>
+                <div className="text-sm font-bold text-slate-900">
+                  Votre position
+                </div>
 
                 {!userPos ? (
-                  <div className="mt-3 text-sm text-slate-500">Position non détectée.</div>
+                  <div className="mt-3 text-sm text-slate-500">
+                    Position non détectée.
+                  </div>
                 ) : (
                   <div className="mt-3 space-y-2 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-slate-500">Latitude</span>
-                      <span className="font-bold text-slate-900">
-                        {userPos.lat.toFixed(5)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-slate-500">Longitude</span>
-                      <span className="font-bold text-slate-900">
-                        {userPos.lng.toFixed(5)}
-                      </span>
-                    </div>
+                    <InfoLine
+                      label="Latitude"
+                      value={userPos.lat.toFixed(5)}
+                    />
+                    <InfoLine
+                      label="Longitude"
+                      value={userPos.lng.toFixed(5)}
+                    />
                   </div>
                 )}
               </div>
@@ -326,7 +344,9 @@ export default function ChargingSession() {
                     <div className="mt-3 space-y-2 text-sm">
                       <InfoLine
                         label="Distance"
-                        value={`${nearestAvailableStation.distance.toFixed(2)} km`}
+                        value={`${nearestAvailableStation.distance.toFixed(
+                          2
+                        )} km`}
                       />
                       <InfoLine
                         label="Puissance"
@@ -338,7 +358,20 @@ export default function ChargingSession() {
                       />
                     </div>
 
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        onClick={() =>
+                          openGoogleMapsRoute(
+                            nearestAvailableStation.lat,
+                            nearestAvailableStation.lng
+                          )
+                        }
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                      >
+                        <Route size={16} />
+                        Voir itinéraire
+                      </button>
+
                       <Link
                         to={`/user/plug/${nearestAvailableStation.id}`}
                         className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
@@ -380,10 +413,13 @@ export default function ChargingSession() {
                     className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
-                      <div className="font-bold text-slate-900">{station.name}</div>
+                      <div className="font-bold text-slate-900">
+                        {station.name}
+                      </div>
                       <div className="mt-1 text-sm text-slate-500">
                         {station.location} • {station.distance.toFixed(2)} km
                       </div>
+
                       <div className="mt-2 flex flex-wrap gap-2">
                         <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
                           <Bolt size={14} />
@@ -407,7 +443,15 @@ export default function ChargingSession() {
                       </div>
                     </div>
 
-                    <div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => openGoogleMapsRoute(station.lat, station.lng)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                      >
+                        <Route size={15} />
+                        Itinéraire
+                      </button>
+
                       <Link
                         to={`/user/plug/${station.id}`}
                         className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50"
@@ -424,17 +468,19 @@ export default function ChargingSession() {
 
         <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-bold text-slate-900">Logique de navigation</div>
+            <div className="text-sm font-bold text-slate-900">
+              Logique de navigation
+            </div>
             <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-100 text-amber-700">
               <PlugZap size={18} />
             </div>
           </div>
 
           <div className="mt-4 text-sm leading-relaxed text-slate-600">
-            Cette page sert uniquement à localiser les stations proches via GPS.
-            Ensuite l’utilisateur clique sur <span className="font-bold">Voir détails</span>,
-            arrive dans <span className="font-bold">PlugDetails</span>, consulte les bornes
-            disponibles, puis choisit la borne à réserver.
+            Cette page localise les stations proches via GPS. L’utilisateur peut
+            ouvrir l’itinéraire avec Google Maps, puis cliquer sur{" "}
+            <span className="font-bold">Voir détails</span> pour choisir une
+            borne et réserver.
           </div>
         </div>
       </main>

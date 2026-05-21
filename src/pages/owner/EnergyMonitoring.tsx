@@ -5,7 +5,6 @@ import {
   BatteryCharging,
   Zap,
   Gauge,
-  BarChart3,
   Leaf,
   Cpu,
 } from "lucide-react";

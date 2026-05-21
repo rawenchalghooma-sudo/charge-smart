@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useStation from "../../hooks/useStation";
 import {
+  AlertTriangle,
   ArrowRight,
   LayoutDashboard,
   Search,
@@ -78,7 +79,6 @@ export default function UserDashboard() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-8">
-
         {/* ── Bienvenue ── */}
         <section className="rounded-[32px] border border-slate-200 bg-white px-8 py-10 shadow-sm md:px-12 md:py-12">
           <div className="max-w-4xl">
@@ -167,6 +167,12 @@ export default function UserDashboard() {
               title="Mon profil"
               description="Consulter et mettre à jour vos informations personnelles."
             />
+            <QuickLinkCard
+              to="/user/sos"
+              icon={<AlertTriangle size={20} />}
+              title="SOS assistance"
+              description="Demander une borne portable en cas de panne ou de batterie critique."
+            />
           </div>
         </section>
 
@@ -212,7 +218,6 @@ export default function UserDashboard() {
 
           {donnees ? (
             <>
-              {/* Cartes de mesure */}
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 text-center">
                   <div className="text-xs font-bold uppercase tracking-widest text-blue-400">
@@ -255,7 +260,6 @@ export default function UserDashboard() {
                 </div>
               </div>
 
-              {/* Commande relais */}
               <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 border border-slate-200 p-4">
                 <div className="flex items-center gap-3">
                   <div
@@ -282,7 +286,6 @@ export default function UserDashboard() {
                 </button>
               </div>
 
-              {/* Horodatage */}
               <p className="mt-3 text-right text-xs text-slate-400">
                 Dernière mise à jour :{" "}
                 {new Date(donnees.timestamp).toLocaleString("fr-FR")}
@@ -322,7 +325,6 @@ export default function UserDashboard() {
             </div>
           </div>
         </section>
-
       </main>
     </div>
   );
@@ -331,7 +333,11 @@ export default function UserDashboard() {
 // ── Composants ──────────────────────────────────────
 
 function StepVisualCard({
-  icon, step, title, description, tone,
+  icon,
+  step,
+  title,
+  description,
+  tone,
 }: {
   icon: React.ReactNode;
   step: string;
@@ -340,13 +346,15 @@ function StepVisualCard({
   tone: "blue" | "emerald" | "amber" | "slate";
 }) {
   const tones = {
-    blue:    "from-blue-50 to-white border-blue-100 text-blue-700",
+    blue: "from-blue-50 to-white border-blue-100 text-blue-700",
     emerald: "from-emerald-50 to-white border-emerald-100 text-emerald-700",
-    amber:   "from-amber-50 to-white border-amber-100 text-amber-700",
-    slate:   "from-slate-50 to-white border-slate-200 text-slate-700",
+    amber: "from-amber-50 to-white border-amber-100 text-amber-700",
+    slate: "from-slate-50 to-white border-slate-200 text-slate-700",
   };
   return (
-    <div className={`rounded-3xl border bg-gradient-to-br p-6 shadow-sm ${tones[tone]}`}>
+    <div
+      className={`rounded-3xl border bg-gradient-to-br p-6 shadow-sm ${tones[tone]}`}
+    >
       <div className="flex items-start justify-between">
         <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-sm">
           {icon}
@@ -356,13 +364,18 @@ function StepVisualCard({
         </span>
       </div>
       <div className="mt-5 text-lg font-black text-slate-900">{title}</div>
-      <div className="mt-2 text-sm leading-relaxed text-slate-600">{description}</div>
+      <div className="mt-2 text-sm leading-relaxed text-slate-600">
+        {description}
+      </div>
     </div>
   );
 }
 
 function QuickLinkCard({
-  to, icon, title, description,
+  to,
+  icon,
+  title,
+  description,
 }: {
   to: string;
   icon: React.ReactNode;
@@ -384,7 +397,9 @@ function QuickLinkCard({
         />
       </div>
       <div className="mt-4 text-base font-black text-slate-900">{title}</div>
-      <div className="mt-2 text-sm leading-relaxed text-slate-500">{description}</div>
+      <div className="mt-2 text-sm leading-relaxed text-slate-500">
+        {description}
+      </div>
     </Link>
   );
 }

@@ -3,6 +3,9 @@ const app = require("./app");
 const sequelize = require("./config/db");
 require("./models");
 
+// ── MQTT + WebSocket ──────────────────────────────────────────
+require("./mqtt");  // démarre MQTT + WebSocket port 3002
+
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {

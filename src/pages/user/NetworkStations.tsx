@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,6 +18,8 @@ type Station = {
   id: number;
   name: string;
   location: string;
+  address?: string;
+  city?: string;
   power_kw: number;
   energy_source: string;
   station_battery: number;
@@ -29,186 +31,38 @@ type Governorate = {
   stations: Station[];
 };
 
+const GOVERNORATE_NAMES = [
+  "Tunis",
+  "Ariana",
+  "Ben Arous",
+  "Manouba",
+  "Nabeul",
+  "Bizerte",
+  "Béja",
+  "Jendouba",
+  "Kef",
+  "Siliana",
+  "Sousse",
+  "Monastir",
+  "Mahdia",
+  "Sfax",
+  "Kairouan",
+  "Kasserine",
+  "Sidi Bouzid",
+  "Gabès",
+  "Médenine",
+  "Tataouine",
+  "Gafsa",
+  "Tozeur",
+  "Kébili",
+  "Zaghouan",
+];
+
 function getStatusClass(status: StationStatus) {
   if (status === "Disponible") return "bg-emerald-50 text-emerald-600";
   if (status === "Occupée") return "bg-amber-50 text-amber-600";
   return "bg-rose-50 text-rose-600";
 }
-
-const TUNISIA_NETWORK: Governorate[] = [
-  {
-    name: "Tunis",
-    stations: [
-      { id: 1, name: "SolarPlug Tunis Centre", location: "Centre-ville, Tunis", power_kw: 22, energy_source: "Solaire", station_battery: 85, status: "Disponible" },
-      { id: 2, name: "SolarPlug Lac 1", location: "Lac 1, Tunis", power_kw: 50, energy_source: "Solaire + Batterie", station_battery: 72, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Ariana",
-    stations: [
-      { id: 3, name: "SolarPlug Ariana Ville", location: "Ariana Ville", power_kw: 22, energy_source: "Solaire", station_battery: 78, status: "Disponible" },
-      { id: 4, name: "SolarPlug Ennasr", location: "Ennasr, Ariana", power_kw: 43, energy_source: "Solaire + Réseau", station_battery: 66, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Ben Arous",
-    stations: [
-      { id: 5, name: "SolarPlug Ben Arous", location: "Ben Arous Centre", power_kw: 22, energy_source: "Solaire", station_battery: 81, status: "Disponible" },
-      { id: 6, name: "SolarPlug Rades", location: "Radès", power_kw: 50, energy_source: "Solaire + Batterie", station_battery: 69, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Manouba",
-    stations: [
-      { id: 7, name: "SolarPlug Manouba", location: "Manouba Centre", power_kw: 22, energy_source: "Solaire", station_battery: 74, status: "Disponible" },
-      { id: 8, name: "SolarPlug Douar Hicher", location: "Douar Hicher, Manouba", power_kw: 22, energy_source: "Solaire", station_battery: 58, status: "Hors ligne" },
-    ],
-  },
-  {
-    name: "Nabeul",
-    stations: [
-      { id: 9, name: "SolarPlug Nabeul", location: "Nabeul Centre", power_kw: 22, energy_source: "Solaire", station_battery: 88, status: "Disponible" },
-      { id: 10, name: "SolarPlug Hammamet", location: "Hammamet", power_kw: 50, energy_source: "Solaire + Batterie", station_battery: 76, status: "Disponible" },
-      { id: 11, name: "SolarPlug Dar Chaabane", location: "Dar Chaabane, Nabeul", power_kw: 22, energy_source: "Solaire", station_battery: 61, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Bizerte",
-    stations: [
-      { id: 12, name: "SolarPlug Bizerte", location: "Bizerte Centre", power_kw: 22, energy_source: "Solaire", station_battery: 82, status: "Disponible" },
-      { id: 13, name: "SolarPlug Menzel Bourguiba", location: "Menzel Bourguiba", power_kw: 43, energy_source: "Solaire + Réseau", station_battery: 67, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Béja",
-    stations: [
-      { id: 14, name: "SolarPlug Béja", location: "Béja Centre", power_kw: 22, energy_source: "Solaire", station_battery: 70, status: "Disponible" },
-      { id: 15, name: "SolarPlug Testour", location: "Testour, Béja", power_kw: 22, energy_source: "Solaire", station_battery: 59, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Jendouba",
-    stations: [
-      { id: 16, name: "SolarPlug Jendouba", location: "Jendouba Centre", power_kw: 22, energy_source: "Solaire", station_battery: 73, status: "Disponible" },
-      { id: 17, name: "SolarPlug Tabarka", location: "Tabarka", power_kw: 43, energy_source: "Solaire + Batterie", station_battery: 65, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Kef",
-    stations: [
-      { id: 18, name: "SolarPlug Kef", location: "Le Kef Centre", power_kw: 22, energy_source: "Solaire", station_battery: 64, status: "Disponible" },
-      { id: 19, name: "SolarPlug Dahmani", location: "Dahmani, Kef", power_kw: 22, energy_source: "Solaire", station_battery: 53, status: "Hors ligne" },
-    ],
-  },
-  {
-    name: "Siliana",
-    stations: [
-      { id: 20, name: "SolarPlug Siliana", location: "Siliana Centre", power_kw: 22, energy_source: "Solaire", station_battery: 71, status: "Disponible" },
-      { id: 21, name: "SolarPlug Makthar", location: "Makthar, Siliana", power_kw: 22, energy_source: "Solaire", station_battery: 62, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Sousse",
-    stations: [
-      { id: 22, name: "SolarPlug Sousse Centre", location: "Sousse Centre", power_kw: 22, energy_source: "Solaire", station_battery: 91, status: "Disponible" },
-      { id: 23, name: "SolarPlug Kantaoui", location: "Port El Kantaoui, Sousse", power_kw: 50, energy_source: "Solaire + Batterie", station_battery: 79, status: "Disponible" },
-      { id: 24, name: "SolarPlug Msaken", location: "Msaken, Sousse", power_kw: 43, energy_source: "Solaire + Réseau", station_battery: 68, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Monastir",
-    stations: [
-      { id: 25, name: "SolarPlug Monastir", location: "Monastir Centre", power_kw: 22, energy_source: "Solaire", station_battery: 84, status: "Disponible" },
-      { id: 26, name: "SolarPlug Ksar Hellal", location: "Ksar Hellal, Monastir", power_kw: 43, energy_source: "Solaire + Batterie", station_battery: 70, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Mahdia",
-    stations: [
-      { id: 27, name: "SolarPlug Mahdia", location: "Corniche Mahdia", power_kw: 22, energy_source: "Solaire", station_battery: 86, status: "Disponible" },
-      { id: 28, name: "SolarPlug Chebba", location: "Chebba, Mahdia", power_kw: 22, energy_source: "Solaire", station_battery: 60, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Sfax",
-    stations: [
-      { id: 29, name: "SolarPlug Sfax Centre", location: "Centre-ville, Sfax", power_kw: 43, energy_source: "Solaire + Batterie", station_battery: 83, status: "Disponible" },
-      { id: 30, name: "SolarPlug Route Tunis", location: "Route de Tunis, Sfax", power_kw: 50, energy_source: "Solaire + Réseau", station_battery: 75, status: "Disponible" },
-      { id: 31, name: "SolarPlug Sakiet Ezzit", location: "Sakiet Ezzit, Sfax", power_kw: 22, energy_source: "Solaire", station_battery: 63, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Kairouan",
-    stations: [
-      { id: 32, name: "SolarPlug Kairouan", location: "Kairouan Centre", power_kw: 22, energy_source: "Solaire", station_battery: 80, status: "Disponible" },
-      { id: 33, name: "SolarPlug Hajeb El Ayoun", location: "Hajeb El Ayoun, Kairouan", power_kw: 22, energy_source: "Solaire", station_battery: 57, status: "Hors ligne" },
-    ],
-  },
-  {
-    name: "Kasserine",
-    stations: [
-      { id: 34, name: "SolarPlug Kasserine", location: "Kasserine Centre", power_kw: 22, energy_source: "Solaire", station_battery: 69, status: "Disponible" },
-      { id: 35, name: "SolarPlug Sbeitla", location: "Sbeitla, Kasserine", power_kw: 22, energy_source: "Solaire", station_battery: 55, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Sidi Bouzid",
-    stations: [
-      { id: 36, name: "SolarPlug Sidi Bouzid", location: "Sidi Bouzid Centre", power_kw: 22, energy_source: "Solaire", station_battery: 77, status: "Disponible" },
-      { id: 37, name: "SolarPlug Regueb", location: "Regueb, Sidi Bouzid", power_kw: 22, energy_source: "Solaire", station_battery: 61, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Gabès",
-    stations: [
-      { id: 38, name: "SolarPlug Gabès Centre", location: "Centre-ville, Gabès", power_kw: 22, energy_source: "Solaire", station_battery: 89, status: "Disponible" },
-      { id: 39, name: "SolarPlug Métouia", location: "Métouia, Gabès", power_kw: 43, energy_source: "Solaire + Batterie", station_battery: 72, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Médenine",
-    stations: [
-      { id: 40, name: "SolarPlug Médenine", location: "Médenine Centre", power_kw: 22, energy_source: "Solaire", station_battery: 87, status: "Disponible" },
-      { id: 41, name: "SolarPlug Djerba", location: "Djerba, Médenine", power_kw: 50, energy_source: "Solaire + Batterie", station_battery: 79, status: "Occupée" },
-      { id: 42, name: "SolarPlug Zarzis", location: "Zarzis, Médenine", power_kw: 43, energy_source: "Solaire + Réseau", station_battery: 68, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Tataouine",
-    stations: [
-      { id: 43, name: "SolarPlug Tataouine", location: "Tataouine Centre", power_kw: 22, energy_source: "Solaire", station_battery: 92, status: "Disponible" },
-      { id: 44, name: "SolarPlug Ghomrassen", location: "Ghomrassen, Tataouine", power_kw: 22, energy_source: "Solaire", station_battery: 73, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Gafsa",
-    stations: [
-      { id: 45, name: "SolarPlug Gafsa", location: "Gafsa Centre", power_kw: 22, energy_source: "Solaire", station_battery: 81, status: "Disponible" },
-      { id: 46, name: "SolarPlug Métlaoui", location: "Métlaoui, Gafsa", power_kw: 22, energy_source: "Solaire", station_battery: 62, status: "Occupée" },
-    ],
-  },
-  {
-    name: "Tozeur",
-    stations: [
-      { id: 47, name: "SolarPlug Tozeur", location: "Tozeur Centre", power_kw: 22, energy_source: "Solaire", station_battery: 94, status: "Disponible" },
-      { id: 48, name: "SolarPlug Nefta", location: "Nefta, Tozeur", power_kw: 22, energy_source: "Solaire", station_battery: 78, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Kébili",
-    stations: [
-      { id: 49, name: "SolarPlug Kébili", location: "Kébili Centre", power_kw: 22, energy_source: "Solaire", station_battery: 90, status: "Disponible" },
-      { id: 50, name: "SolarPlug Douz", location: "Douz, Kébili", power_kw: 43, energy_source: "Solaire + Batterie", station_battery: 76, status: "Disponible" },
-    ],
-  },
-  {
-    name: "Zaghouan",
-    stations: [
-      { id: 51, name: "SolarPlug Zaghouan", location: "Zaghouan Centre", power_kw: 22, energy_source: "Solaire", station_battery: 74, status: "Disponible" },
-      { id: 52, name: "SolarPlug El Fahs", location: "El Fahs, Zaghouan", power_kw: 22, energy_source: "Solaire", station_battery: 59, status: "Occupée" },
-    ],
-  },
-];
 
 function StationCard({ station }: { station: Station }) {
   return (
@@ -217,7 +71,11 @@ function StationCard({ station }: { station: Station }) {
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-lg font-bold text-slate-900">{station.name}</h3>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusClass(station.status)}`}>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusClass(
+                station.status
+              )}`}
+            >
               {station.status}
             </span>
           </div>
@@ -261,6 +119,9 @@ export default function NetworkStations() {
 
   const [selectedGovernorate, setSelectedGovernorate] = useState("Tunis");
   const [searchTerm, setSearchTerm] = useState("");
+  const [stations, setStations] = useState<Station[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -268,16 +129,57 @@ export default function NetworkStations() {
     navigate("/user/login");
   };
 
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch("http://localhost:5000/api/stations");
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || "Erreur lors du chargement des bornes.");
+        }
+
+        setStations(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        setError("Impossible de charger les bornes depuis le serveur.");
+        setStations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStations();
+  }, []);
+
+  const tunisiaNetwork = useMemo<Governorate[]>(() => {
+    return GOVERNORATE_NAMES.map((name) => ({
+      name,
+      stations: stations.filter((station) => {
+        const stationCity = (station.city || "").trim().toLowerCase();
+        return stationCity === name.trim().toLowerCase();
+      }),
+    }));
+  }, [stations]);
+
   const currentGovernorate = useMemo(() => {
-    return TUNISIA_NETWORK.find((item) => item.name === selectedGovernorate) || TUNISIA_NETWORK[0];
-  }, [selectedGovernorate]);
+    return (
+      tunisiaNetwork.find((item) => item.name === selectedGovernorate) ||
+      tunisiaNetwork[0]
+    );
+  }, [selectedGovernorate, tunisiaNetwork]);
 
   const filteredStations = useMemo(() => {
     return currentGovernorate.stations.filter((station) => {
+      const q = searchTerm.toLowerCase();
       return (
-        station.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        station.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        station.status.toLowerCase().includes(searchTerm.toLowerCase())
+        station.name.toLowerCase().includes(q) ||
+        station.location.toLowerCase().includes(q) ||
+        station.status.toLowerCase().includes(q) ||
+        (station.city || "").toLowerCase().includes(q)
       );
     });
   }, [currentGovernorate, searchTerm]);
@@ -329,7 +231,7 @@ export default function NetworkStations() {
               Sélectionnez un gouvernorat
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              Cliquez sur un gouvernorat pour afficher 2 à 3 stations SolarPlug disponibles.
+              Cliquez sur un gouvernorat pour afficher les stations SolarPlug disponibles.
             </p>
           </div>
 
@@ -342,7 +244,10 @@ export default function NetworkStations() {
         <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
             <div className="relative">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
                 type="text"
                 value={searchTerm}
@@ -359,7 +264,7 @@ export default function NetworkStations() {
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-            {TUNISIA_NETWORK.map((governorate) => {
+            {tunisiaNetwork.map((governorate) => {
               const isSelected = governorate.name === selectedGovernorate;
 
               return (
@@ -399,7 +304,19 @@ export default function NetworkStations() {
             </span>
           </div>
 
-          {filteredStations.length > 0 ? (
+          {loading ? (
+            <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900">Chargement...</h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Récupération des bornes depuis le serveur.
+              </p>
+            </div>
+          ) : error ? (
+            <div className="rounded-3xl border border-rose-200 bg-rose-50 p-10 text-center shadow-sm">
+              <h3 className="text-lg font-bold text-rose-700">Erreur</h3>
+              <p className="mt-2 text-sm text-rose-600">{error}</p>
+            </div>
+          ) : filteredStations.length > 0 ? (
             filteredStations.map((station) => (
               <StationCard key={station.id} station={station} />
             ))
@@ -409,7 +326,7 @@ export default function NetworkStations() {
                 Aucune station trouvée
               </h3>
               <p className="mt-2 text-sm text-slate-500">
-                Essaie de modifier la recherche.
+                Aucune borne n’est disponible pour ce gouvernorat ou cette recherche.
               </p>
             </div>
           )}

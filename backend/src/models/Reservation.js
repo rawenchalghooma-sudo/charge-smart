@@ -21,9 +21,15 @@ const Reservation = sequelize.define("Reservation", {
   },
 
   status: {
-    type: DataTypes.ENUM("pending", "confirmed", "cancelled", "completed"),
-    defaultValue: "pending",
-  },
+  type: DataTypes.ENUM(
+    "pending",
+    "confirmed",
+    "rejected",
+    "cancelled",
+    "completed"
+  ),
+  defaultValue: "pending",
+},
 
   estimatedKwh: {
     type: DataTypes.FLOAT,

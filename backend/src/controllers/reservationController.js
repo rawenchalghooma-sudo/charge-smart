@@ -9,7 +9,6 @@ const calculateMinimumChargeTime = (
   chargerPowerKw
 ) => {
   const energyNeeded = batteryKwh * (targetPercent / 100);
-
   const timeHours = energyNeeded / chargerPowerKw;
 
   return Math.ceil(timeHours * 60);
@@ -20,11 +19,8 @@ const calculateMinimumChargeTime = (
 // =========================
 const calculateUrgency = (selectedDuration, minimumDuration) => {
   if (selectedDuration <= minimumDuration) return 100;
-
   if (selectedDuration <= minimumDuration + 15) return 80;
-
   if (selectedDuration <= minimumDuration + 30) return 60;
-
   if (selectedDuration <= minimumDuration + 60) return 40;
 
   return 10;
@@ -32,12 +28,10 @@ const calculateUrgency = (selectedDuration, minimumDuration) => {
 
 // =========================
 // USER - Créer réservation
+// QR n'est PAS généré ici
 // =========================
 const createReservation = async (req, res) => {
   try {
-    console.log("USER:", req.user);
-    console.log("BODY:", req.body);
-
     if (!req.user || !req.user.id) {
       return res.status(401).json({
         message: "Utilisateur non authentifié.",
@@ -51,28 +45,16 @@ const createReservation = async (req, res) => {
       reservationDate,
       startTime,
       endTime,
-
       estimatedKwh,
       estimatedCost,
-
       vehicleType,
       batteryKwh,
       targetPercent,
       chargerPowerKw,
-
       durationMin,
     } = req.body;
 
-    // =========================
-    // VALIDATIONS
-    // =========================
-
-    if (
-      !stationId ||
-      !reservationDate ||
-      !startTime ||
-      !endTime
-    ) {
+    if (!stationId || !reservationDate || !startTime || !endTime) {
       return res.status(400).json({
         message:
           "stationId, reservationDate, startTime et endTime sont obligatoires.",
@@ -81,15 +63,13 @@ const createReservation = async (req, res) => {
 
     if (durationMin < 10 || durationMin > 120) {
       return res.status(400).json({
-        message:
-          "La durée doit être entre 10 minutes et 2 heures.",
+        message: "La durée doit être entre 10 minutes et 2 heures.",
       });
     }
 
     if (targetPercent < 10 || targetPercent > 100) {
       return res.status(400).json({
-        message:
-          "Le pourcentage doit être entre 10% et 100%.",
+        message: "Le pourcentage doit être entre 10% et 100%.",
       });
     }
 
@@ -101,29 +81,17 @@ const createReservation = async (req, res) => {
       });
     }
 
-    // =========================
-    // CALCUL IA
-    // =========================
-
     const minimumDuration = calculateMinimumChargeTime(
       batteryKwh,
       targetPercent,
       chargerPowerKw
     );
 
-    const urgencyScore = calculateUrgency(
-      durationMin,
-      minimumDuration
-    );
-
-    // =========================
-    // CREATE RESERVATION
-    // =========================
+    const urgencyScore = calculateUrgency(durationMin, minimumDuration);
 
     const reservation = await Reservation.create({
       userId,
       stationId,
-
       reservationDate,
       startTime,
       endTime,
@@ -139,38 +107,20 @@ const createReservation = async (req, res) => {
 
       durationMin,
       minimumDuration,
-
       urgencyScore,
 
       status: "pending",
+      qrCodeId: null,
     });
 
-    // =========================
-    // QR CODE
-    // =========================
-
-    const qrCodeId = `ID:${reservation.id}|URGENCY:${urgencyScore}`;
-
-    reservation.qrCodeId = qrCodeId;
-
-    await reservation.save();
-
     return res.status(201).json({
-      message: "Réservation créée avec succès.",
-
-      reservation: {
-        ...reservation.toJSON(),
-
-        urgencyScore,
-        minimumDuration,
-        qrCodeId,
-      },
+      message:
+        "Réservation créée avec succès. En attente de confirmation du propriétaire.",
+      reservation,
     });
   } catch (error) {
     console.error("Erreur createReservation :", error.message);
-
     console.error("MYSQL ERROR :", error.parent?.sqlMessage);
-
     console.error("SQL :", error.parent?.sql);
 
     return res.status(500).json({
@@ -188,13 +138,20 @@ const getMyReservations = async (req, res) => {
 
     const reservations = await Reservation.findAll({
       where: { userId },
-
       include: [
         {
           model: Station,
+          attributes: [
+            "id",
+            "name",
+            "address",
+            "city",
+            "powerKw",
+            "status",
+            "pricePerKwh",
+          ],
         },
       ],
-
       order: [["createdAt", "DESC"]],
     });
 
@@ -214,7 +171,6 @@ const getMyReservations = async (req, res) => {
 const getReservationById = async (req, res) => {
   try {
     const userId = req.user.id;
-
     const { id } = req.params;
 
     const reservation = await Reservation.findOne({
@@ -222,12 +178,7 @@ const getReservationById = async (req, res) => {
         id,
         userId,
       },
-
-      include: [
-        {
-          model: Station,
-        },
-      ],
+      include: [{ model: Station }],
     });
 
     if (!reservation) {
@@ -247,12 +198,11 @@ const getReservationById = async (req, res) => {
 };
 
 // =========================
-// USER - Annuler
+// USER - Annuler réservation
 // =========================
 const cancelReservation = async (req, res) => {
   try {
     const userId = req.user.id;
-
     const { id } = req.params;
 
     const reservation = await Reservation.findOne({
@@ -269,7 +219,6 @@ const cancelReservation = async (req, res) => {
     }
 
     reservation.status = "cancelled";
-
     await reservation.save();
 
     return res.status(200).json({
@@ -278,6 +227,36 @@ const cancelReservation = async (req, res) => {
     });
   } catch (error) {
     console.error("Erreur cancelReservation :", error.message);
+
+    return res.status(500).json({
+      message: error.parent?.sqlMessage || error.message,
+    });
+  }
+};
+
+// =========================
+// USER - Vérifier accès live charge
+// Seulement si réservation confirmed
+// =========================
+const checkLiveChargingAccess = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const reservation = await Reservation.findOne({
+      where: {
+        userId,
+        status: "confirmed",
+      },
+      include: [{ model: Station }],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json({
+      hasAccess: !!reservation,
+      reservation,
+    });
+  } catch (error) {
+    console.error("Erreur checkLiveChargingAccess :", error.message);
 
     return res.status(500).json({
       message: error.parent?.sqlMessage || error.message,
@@ -296,25 +275,22 @@ const getOwnerReservations = async (req, res) => {
       include: [
         {
           model: Station,
-
           where: { ownerId },
-
           attributes: [
             "id",
             "name",
             "address",
             "city",
+            "powerKw",
             "status",
+            "pricePerKwh",
           ],
         },
-
         {
           model: User,
-
           attributes: ["id", "name", "email"],
         },
       ],
-
       order: [["createdAt", "DESC"]],
     });
 
@@ -329,21 +305,19 @@ const getOwnerReservations = async (req, res) => {
 };
 
 // =========================
-// OWNER - Confirmer
+// OWNER - Confirmer réservation
+// QR généré ici seulement
 // =========================
 const confirmReservationByOwner = async (req, res) => {
   try {
     const ownerId = req.user.id;
-
     const { id } = req.params;
 
     const reservation = await Reservation.findOne({
       where: { id },
-
       include: [
         {
           model: Station,
-
           where: { ownerId },
         },
       ],
@@ -351,24 +325,23 @@ const confirmReservationByOwner = async (req, res) => {
 
     if (!reservation) {
       return res.status(404).json({
-        message:
-          "Réservation introuvable pour ce propriétaire.",
+        message: "Réservation introuvable pour ce propriétaire.",
       });
     }
 
     reservation.status = "confirmed";
 
+    const qrCodeId = `ID:${reservation.id}|URGENCY:${reservation.urgencyScore || 0}`;
+    reservation.qrCodeId = qrCodeId;
+
     await reservation.save();
 
     return res.status(200).json({
-      message: "Réservation confirmée avec succès.",
+      message: "Réservation confirmée avec succès. QR code généré.",
       reservation,
     });
   } catch (error) {
-    console.error(
-      "Erreur confirmReservationByOwner :",
-      error.message
-    );
+    console.error("Erreur confirmReservationByOwner :", error.message);
 
     return res.status(500).json({
       message: error.parent?.sqlMessage || error.message,
@@ -377,21 +350,19 @@ const confirmReservationByOwner = async (req, res) => {
 };
 
 // =========================
-// OWNER - Annuler
+// OWNER - Rejeter réservation
+// Pas de QR
 // =========================
-const cancelReservationByOwner = async (req, res) => {
+const rejectReservationByOwner = async (req, res) => {
   try {
     const ownerId = req.user.id;
-
     const { id } = req.params;
 
     const reservation = await Reservation.findOne({
       where: { id },
-
       include: [
         {
           model: Station,
-
           where: { ownerId },
         },
       ],
@@ -399,25 +370,64 @@ const cancelReservationByOwner = async (req, res) => {
 
     if (!reservation) {
       return res.status(404).json({
-        message:
-          "Réservation introuvable pour ce propriétaire.",
+        message: "Réservation introuvable pour ce propriétaire.",
       });
     }
 
-    reservation.status = "cancelled";
+    reservation.status = "rejected";
+    reservation.qrCodeId = null;
 
     await reservation.save();
 
     return res.status(200).json({
-      message:
-        "Réservation annulée par le propriétaire avec succès.",
+      message: "Réservation rejetée avec succès.",
       reservation,
     });
   } catch (error) {
-    console.error(
-      "Erreur cancelReservationByOwner :",
-      error.message
-    );
+    console.error("Erreur rejectReservationByOwner :", error.message);
+
+    return res.status(500).json({
+      message: error.parent?.sqlMessage || error.message,
+    });
+  }
+};
+
+// =========================
+// OWNER - Annuler réservation
+// Pas de QR
+// =========================
+const cancelReservationByOwner = async (req, res) => {
+  try {
+    const ownerId = req.user.id;
+    const { id } = req.params;
+
+    const reservation = await Reservation.findOne({
+      where: { id },
+      include: [
+        {
+          model: Station,
+          where: { ownerId },
+        },
+      ],
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        message: "Réservation introuvable pour ce propriétaire.",
+      });
+    }
+
+    reservation.status = "cancelled";
+    reservation.qrCodeId = null;
+
+    await reservation.save();
+
+    return res.status(200).json({
+      message: "Réservation annulée par le propriétaire avec succès.",
+      reservation,
+    });
+  } catch (error) {
+    console.error("Erreur cancelReservationByOwner :", error.message);
 
     return res.status(500).json({
       message: error.parent?.sqlMessage || error.message,
@@ -430,7 +440,9 @@ module.exports = {
   getMyReservations,
   getReservationById,
   cancelReservation,
+  checkLiveChargingAccess,
   getOwnerReservations,
   confirmReservationByOwner,
+  rejectReservationByOwner,
   cancelReservationByOwner,
 };

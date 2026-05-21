@@ -42,7 +42,7 @@ function diffuserWebSocket(data) {
 // CLIENT MQTT
 // ====================================================
 const MQTT_BROKER = process.env.MQTT_BROKER || "localhost";
-const mqttClient  = mqtt.connect(`mqtt://${MQTT_BROKER}:1883`);
+const mqttClient  = mqtt.connect(`mqtt://${MQTT_BROKER}:1884`);
 
 mqttClient.on("connect", () => {
   console.log("✅ Connecté au broker MQTT");

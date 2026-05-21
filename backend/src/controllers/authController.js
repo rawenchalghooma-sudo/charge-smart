@@ -15,6 +15,15 @@ const signup = asyncHandler(async (req, res) => {
       throw new Error("Please provide all required fields");
     }
 
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+    if (!passwordRegex.test(password)) {
+      res.status(400);
+      throw new Error(
+        "Le mot de passe doit contenir au minimum 8 caractères, une majuscule, une minuscule et un chiffre."
+      );
+    }
+
     if (!["user", "owner", "admin"].includes(role)) {
       res.status(400);
       throw new Error("Invalid role");
@@ -63,7 +72,9 @@ const signup = asyncHandler(async (req, res) => {
     console.log("MYSQL ERROR:", error.parent?.sqlMessage);
     console.log("MYSQL SQL:", error.parent?.sql);
 
-    res.status(500).json({
+    const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+
+    res.status(statusCode).json({
       message: error.parent?.sqlMessage || error.message,
     });
   }

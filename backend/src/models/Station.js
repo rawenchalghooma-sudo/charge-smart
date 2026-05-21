@@ -2,32 +2,71 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
 
 const Station = sequelize.define("Station", {
-  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
 
-  name: { type: DataTypes.STRING, allowNull: false },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
 
-  address: { type: DataTypes.STRING },
+  address: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
 
-  city: { type: DataTypes.STRING },
+  city: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
 
-  latitude: { type: DataTypes.FLOAT },
+  latitude: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+  },
 
-  longitude: { type: DataTypes.FLOAT },
+  longitude: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+  },
 
-  powerKw: { type: DataTypes.FLOAT },
+  powerKw: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+  },
 
   status: {
     type: DataTypes.ENUM("available", "occupied", "offline"),
     defaultValue: "available",
   },
 
-  energySource: { type: DataTypes.STRING },
+  energySource: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 
-  batteryLevel: { type: DataTypes.FLOAT },
+  batteryLevel: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+  },
 
-  pricePerKwh: { type: DataTypes.FLOAT },
+  pricePerKwh: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+  },
 
-  isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+
+  ownerId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
 });
 
 module.exports = Station;

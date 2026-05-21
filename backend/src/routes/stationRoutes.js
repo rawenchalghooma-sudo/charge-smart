@@ -3,6 +3,8 @@ const router = express.Router();
 
 const {
   getStations,
+  getStationsByCity,
+  getMyStations,
   getStationById,
   createStation,
 } = require("../controllers/stationController");
@@ -10,11 +12,24 @@ const {
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
-// Public / connected routes existantes
+// Public routes
 router.get("/", getStations);
+router.get("/city/:city", getStationsByCity);
 router.get("/:id", getStationById);
 
 // Owner only
-router.post("/", authMiddleware, roleMiddleware("owner"), createStation);
+router.get(
+  "/owner/my-stations",
+  authMiddleware,
+  roleMiddleware("owner"),
+  getMyStations
+);
+
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware("owner"),
+  createStation
+);
 
 module.exports = router;

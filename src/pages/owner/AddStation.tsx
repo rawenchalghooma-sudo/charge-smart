@@ -3,13 +3,37 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   LogOut,
-  Zap,
-  MapPin,
-  BatteryCharging,
   Save,
   XCircle,
   PlusCircle,
 } from "lucide-react";
+
+const TUNISIA_CITIES = [
+  "Tunis",
+  "Ariana",
+  "Ben Arous",
+  "Manouba",
+  "Nabeul",
+  "Bizerte",
+  "Béja",
+  "Jendouba",
+  "Kef",
+  "Siliana",
+  "Sousse",
+  "Monastir",
+  "Mahdia",
+  "Sfax",
+  "Kairouan",
+  "Kasserine",
+  "Sidi Bouzid",
+  "Gabès",
+  "Médenine",
+  "Tataouine",
+  "Gafsa",
+  "Tozeur",
+  "Kébili",
+  "Zaghouan",
+];
 
 export default function AddStation() {
   const navigate = useNavigate();
@@ -20,12 +44,6 @@ export default function AddStation() {
     city: "",
     latitude: "",
     longitude: "",
-    powerKw: "",
-    energySource: "solar",
-    batteryLevel: "",
-    pricePerKwh: "",
-    status: "available",
-    isActive: true,
   });
 
   const [loading, setLoading] = useState(false);
@@ -47,16 +65,7 @@ export default function AddStation() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value, type } = e.target;
-
-    if (type === "checkbox") {
-      const target = e.target as HTMLInputElement;
-      setFormData((prev) => ({
-        ...prev,
-        [name]: target.checked,
-      }));
-      return;
-    }
+    const { name, value } = e.target;
 
     setFormData((prev) => ({
       ...prev,
@@ -78,14 +87,14 @@ export default function AddStation() {
         city: formData.city,
         latitude: formData.latitude === "" ? null : Number(formData.latitude),
         longitude: formData.longitude === "" ? null : Number(formData.longitude),
-        powerKw: formData.powerKw === "" ? null : Number(formData.powerKw),
-        energySource: formData.energySource,
-        batteryLevel:
-          formData.batteryLevel === "" ? null : Number(formData.batteryLevel),
-        pricePerKwh:
-          formData.pricePerKwh === "" ? null : Number(formData.pricePerKwh),
-        status: formData.status,
-        isActive: formData.isActive,
+
+        // Valeurs par défaut automatiques
+        powerKw: 22,
+        energySource: "solar",
+        batteryLevel: 80,
+        pricePerKwh: 0.75,
+        status: "available",
+        isActive: true,
       };
 
       const response = await fetch("http://localhost:5000/api/stations", {
@@ -119,7 +128,7 @@ export default function AddStation() {
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <PlusCircle size={20} />
@@ -156,20 +165,19 @@ export default function AddStation() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main className="mx-auto max-w-4xl px-4 py-8">
         <section className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-3xl font-black tracking-tight text-slate-900">
               Nouvelle station de recharge
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              Ajoutez une nouvelle borne solaire à votre réseau avec ses
-              informations techniques et énergétiques.
+              Ajoutez seulement les informations principales de la borne.
             </p>
           </div>
 
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-            Formulaire de création
+            Formulaire simplifié
           </div>
         </section>
 
@@ -185,232 +193,102 @@ export default function AddStation() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <Zap size={18} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Informations générales
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Identité principale de la borne
-                </p>
-              </div>
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+        >
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-slate-900">
+              Informations principales
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Nom, ville, adresse et position de la borne.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Nom de la borne
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Ex: Solar Station Gafsa 01"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
+                required
+              />
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Nom de la borne
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Ex: Solar Station Tunis 05"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Ville
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="Ex: Tunis"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Ex: Rue de Marseille, Tunis Centre"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <MapPin size={18} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Position géographique
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Coordonnées de la station
-                </p>
-              </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Ville
+              </label>
+              <select
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
+                required
+              >
+                <option value="">Choisir une ville</option>
+                {TUNISIA_CITIES.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Latitude
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  name="latitude"
-                  value={formData.latitude}
-                  onChange={handleChange}
-                  placeholder="Ex: 36.8065"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Longitude
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  name="longitude"
-                  value={formData.longitude}
-                  onChange={handleChange}
-                  placeholder="Ex: 10.1815"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <BatteryCharging size={18} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Paramètres techniques
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Caractéristiques énergétiques de la borne
-                </p>
-              </div>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Adresse
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Ex: Rue principale, Gafsa"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
+                required
+              />
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Puissance (kW)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  name="powerKw"
-                  value={formData.powerKw}
-                  onChange={handleChange}
-                  placeholder="Ex: 22"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Source d’énergie
-                </label>
-                <select
-                  name="energySource"
-                  value={formData.energySource}
-                  onChange={handleChange}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                >
-                  <option value="solar">Solaire</option>
-                  <option value="battery">Batterie</option>
-                  <option value="grid">Réseau</option>
-                  <option value="solar_battery">Solaire + Batterie</option>
-                  <option value="solar_grid">Solaire + Réseau</option>
-                  <option value="battery_grid">Batterie + Réseau</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Niveau batterie (%)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  name="batteryLevel"
-                  value={formData.batteryLevel}
-                  onChange={handleChange}
-                  placeholder="Ex: 85"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Prix par kWh
-                </label>
-                <input
-                  type="number"
-                  step="0.001"
-                  name="pricePerKwh"
-                  value={formData.pricePerKwh}
-                  onChange={handleChange}
-                  placeholder="Ex: 0.750"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Statut initial
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
-                >
-                  <option value="available">Disponible</option>
-                  <option value="occupied">Occupée</option>
-                  <option value="offline">Hors ligne</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <input
-                  id="isActive"
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <label
-                  htmlFor="isActive"
-                  className="text-sm font-semibold text-slate-700"
-                >
-                  Borne active dès la création
-                </label>
-              </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Latitude
+              </label>
+              <input
+                type="number"
+                step="any"
+                name="latitude"
+                value={formData.latitude}
+                onChange={handleChange}
+                placeholder="Ex: 34.4250"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
+              />
             </div>
-          </section>
 
-          <section className="flex flex-wrap justify-end gap-3">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Longitude
+              </label>
+              <input
+                type="number"
+                step="any"
+                name="longitude"
+                value={formData.longitude}
+                onChange={handleChange}
+                placeholder="Ex: 8.7842"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-300 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-wrap justify-end gap-3">
             <button
               type="button"
               onClick={() => navigate("/owner/stations")}
@@ -428,7 +306,7 @@ export default function AddStation() {
               <Save size={18} />
               {loading ? "Enregistrement..." : "Enregistrer la borne"}
             </button>
-          </section>
+          </div>
         </form>
       </main>
     </div>

@@ -15,7 +15,11 @@ type Role = "user" | "owner" | "admin";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState<"signup" | "success">("signup");
+
+  const [currentPage, setCurrentPage] = useState<"signup" | "success">(
+    "signup"
+  );
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -23,10 +27,19 @@ export default function Signup() {
     role: "user" as Role,
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const [passwordError, setPasswordError] = useState("");
+
+  const validatePassword = (password: string) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    return regex.test(password);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+
+    if (e.target.name === "password") {
+      setPasswordError("");
+    }
   };
 
   const handleRoleChange = (role: Role) => {
@@ -34,37 +47,45 @@ export default function Signup() {
   };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        role: form.role,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.message || "Erreur lors de la création du compte");
+    if (!validatePassword(form.password)) {
+      setPasswordError(
+        "Le mot de passe doit contenir au minimum 8 caractères, une majuscule, une minuscule et un chiffre."
+      );
       return;
     }
 
-    // succès → page success
-    setCurrentPage("success");
+    setPasswordError("");
 
-  } catch (error) {
-    console.error(error);
-    alert("Impossible de contacter le serveur");
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role: form.role,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Erreur lors de la création du compte");
+        return;
+      }
+
+      setCurrentPage("success");
+    } catch (error) {
+      console.error(error);
+      alert("Impossible de contacter le serveur");
+    }
   }
-}
+
   const handleSuccessRedirect = () => {
     if (form.role === "user") {
       navigate("/user/login");
@@ -105,14 +126,12 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-4">
-      {/* Cercles décoratifs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute top-[10%] right-[10%] h-[400px] w-[400px] rounded-full bg-emerald-100/30 blur-[100px]" />
         <div className="absolute bottom-[10%] left-[10%] h-[300px] w-[300px] rounded-full bg-blue-100/20 blur-[80px]" />
       </div>
 
       <div className="relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-[3rem] border border-white bg-white/70 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] backdrop-blur-md lg:flex-row">
-        {/* Section gauche */}
         <div className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-emerald-600 to-green-500 p-12 text-white lg:w-2/5">
           <div className="relative z-10">
             <div className="mb-16 flex items-center gap-3">
@@ -159,7 +178,6 @@ export default function Signup() {
           </div>
         </div>
 
-        {/* Section droite */}
         <div className="flex-1 p-8 lg:p-16">
           <div className="mx-auto max-w-md">
             <div className="mb-10 text-center lg:text-left">
@@ -218,6 +236,7 @@ export default function Signup() {
                 <label className="ml-1 text-xs font-bold uppercase tracking-widest text-slate-400">
                   Mot de passe
                 </label>
+
                 <div className="group relative">
                   <Lock
                     className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-emerald-500"
@@ -230,9 +249,24 @@ export default function Signup() {
                     value={form.password}
                     onChange={handleChange}
                     placeholder="••••••••"
-                    className="w-full rounded-[1.25rem] border border-slate-100 bg-slate-50/50 py-4 pl-12 pr-4 text-sm font-semibold outline-none transition-all placeholder:text-slate-300 focus:border-emerald-200 focus:bg-white focus:ring-[6px] focus:ring-emerald-500/5"
+                    className={`w-full rounded-[1.25rem] border bg-slate-50/50 py-4 pl-12 pr-4 text-sm font-semibold outline-none transition-all placeholder:text-slate-300 focus:bg-white focus:ring-[6px] ${
+                      passwordError
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-500/5"
+                        : "border-slate-100 focus:border-emerald-200 focus:ring-emerald-500/5"
+                    }`}
                   />
                 </div>
+
+                <p className="mt-2 text-xs text-slate-400">
+                  Minimum 8 caractères avec une majuscule, une minuscule et un
+                  chiffre.
+                </p>
+
+                {passwordError && (
+                  <p className="mt-2 text-xs font-bold text-red-500">
+                    {passwordError}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">

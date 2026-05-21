@@ -5,12 +5,8 @@ import {
   CalendarDays,
   Clock,
   Timer,
-  MapPin,
-  Zap,
-  CheckCircle2,
   AlertTriangle,
   LogOut,
-  PlugZap,
   Car,
   BatteryCharging,
   Percent,
@@ -19,13 +15,18 @@ import {
 type StationType = {
   id: number | string;
   name: string;
-  location: string;
+  location?: string;
+  address?: string;
+  city?: string;
   power_kw?: number;
+  powerKw?: number;
   status?: string;
   lat?: number;
   lng?: number;
-  energy_source?: string;
   station_battery?: number;
+  batteryLevel?: number;
+  price_per_kwh?: number;
+  pricePerKwh?: number;
 };
 
 type ChargingPoint = {
@@ -87,7 +88,10 @@ function calculateMinimumChargeTime(
   return Math.ceil(timeHours * 60);
 }
 
-function calculateUrgencyPreview(selectedDuration: number, minimumDuration: number) {
+function calculateUrgencyPreview(
+  selectedDuration: number,
+  minimumDuration: number
+) {
   if (selectedDuration <= minimumDuration) return 100;
   if (selectedDuration <= minimumDuration + 15) return 80;
   if (selectedDuration <= minimumDuration + 30) return 60;
@@ -114,7 +118,6 @@ export default function ReservationPage() {
   const location = useLocation();
 
   const state = (location.state as ReservationLocationState) || {};
-  const selectedChargingPoint = state.selectedChargingPoint || null;
 
   const [station, setStation] = useState<StationType | null>(null);
   const [stationLoading, setStationLoading] = useState(true);
@@ -135,6 +138,18 @@ export default function ReservationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const stationPower = station?.power_kw ?? station?.powerKw ?? 22;
+  const stationPrice = station?.price_per_kwh ?? station?.pricePerKwh ?? 0.45;
+
+  const selectedChargingPoint: ChargingPoint =
+    state.selectedChargingPoint || {
+      id: "cp1",
+      label: "Borne principale",
+      connectorType: stationPower >= 50 ? "CCS Combo" : "Type 2",
+      powerKw: stationPower,
+      status: "Disponible",
+    };
+
   const selectedCar = useMemo(() => {
     if (selectedCarName === "Autre") {
       return {
@@ -146,7 +161,7 @@ export default function ReservationPage() {
     return carModels.find((car) => car.name === selectedCarName) || carModels[0];
   }, [selectedCarName, customCarName, customBatteryKwh]);
 
-  const selectedPower = selectedChargingPoint?.powerKw ?? station?.power_kw ?? 22;
+  const selectedPower = selectedChargingPoint.powerKw || stationPower || 22;
 
   const minimumDuration = useMemo(() => {
     return calculateMinimumChargeTime(
@@ -162,6 +177,7 @@ export default function ReservationPage() {
 
   const isDurationValid = durationMin >= 10 && durationMin <= 120;
   const isTargetPercentValid = targetPercent >= 10 && targetPercent <= 100;
+
   const isCustomCarValid =
     selectedCarName !== "Autre" ||
     (customCarName.trim().length > 1 &&
@@ -178,11 +194,9 @@ export default function ReservationPage() {
     return Number(energyNeeded.toFixed(2));
   }, [selectedCar.batteryKwh, targetPercent]);
 
-  const AVERAGE_PRICE_PER_KWH = 0.45;
-
   const estimatedCost = useMemo(() => {
-    return Number((estimatedKwh * AVERAGE_PRICE_PER_KWH).toFixed(2));
-  }, [estimatedKwh]);
+    return Number((estimatedKwh * stationPrice).toFixed(2));
+  }, [estimatedKwh, stationPrice]);
 
   useEffect(() => {
     const fetchStation = async () => {
@@ -201,7 +215,9 @@ export default function ReservationPage() {
       } catch (err: any) {
         console.error("Erreur chargement station :", err);
         setStation(null);
-        setError(err.message || "Impossible de charger les détails de la station.");
+        setError(
+          err.message || "Impossible de charger les détails de la station."
+        );
       } finally {
         setStationLoading(false);
       }
@@ -266,13 +282,10 @@ export default function ReservationPage() {
       return;
     }
 
-    if (!selectedChargingPoint) {
-      setError("Veuillez d’abord choisir une borne depuis la page des détails.");
-      return;
-    }
-
-    if (station.status !== "Disponible") {
-      setError("Cette station est actuellement occupée. Choisissez une autre station.");
+    if (station.status && station.status !== "Disponible") {
+      setError(
+        "Cette station est actuellement occupée. Choisissez une autre station."
+      );
       return;
     }
 
@@ -346,7 +359,9 @@ export default function ReservationPage() {
       const data = rawText ? JSON.parse(rawText) : {};
 
       if (!response.ok) {
-        throw new Error(data.message || "Erreur lors de la création de la réservation.");
+        throw new Error(
+          data.message || "Erreur lors de la création de la réservation."
+        );
       }
 
       navigate(`/user/reservation-qr/${data.reservation.id}`, {
@@ -394,7 +409,9 @@ export default function ReservationPage() {
               </div>
               <div className="text-xs text-slate-500">
                 Station :{" "}
-                <span className="font-semibold">{station?.name || id || "—"}</span>
+                <span className="font-semibold">
+                  {station?.name || state.stationName || id || "—"}
+                </span>
               </div>
             </div>
           </div>
@@ -416,6 +433,7 @@ export default function ReservationPage() {
               <h1 className="text-xl font-black text-slate-900">
                 Détails de réservation
               </h1>
+
               <p className="mt-1 text-sm text-slate-500">
                 Choisissez la voiture, le pourcentage souhaité et la durée.
               </p>
@@ -438,8 +456,13 @@ export default function ReservationPage() {
                     <label className="ml-1 text-sm font-bold text-slate-700">
                       Modèle de voiture
                     </label>
+
                     <div className="relative">
-                      <Car className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Car
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                        size={18}
+                      />
+
                       <select
                         value={selectedCarName}
                         onChange={(e) => setSelectedCarName(e.target.value)}
@@ -448,7 +471,9 @@ export default function ReservationPage() {
                         {carModels.map((car) => (
                           <option key={car.name} value={car.name}>
                             {car.name}
-                            {car.batteryKwh > 0 ? ` — ${car.batteryKwh} kWh` : ""}
+                            {car.batteryKwh > 0
+                              ? ` — ${car.batteryKwh} kWh`
+                              : ""}
                           </option>
                         ))}
                       </select>
@@ -459,8 +484,13 @@ export default function ReservationPage() {
                     <label className="ml-1 text-sm font-bold text-slate-700">
                       Pourcentage souhaité
                     </label>
+
                     <div className="relative">
-                      <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Percent
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                        size={18}
+                      />
+
                       <input
                         type="number"
                         min={10}
@@ -473,6 +503,7 @@ export default function ReservationPage() {
                         className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3.5 pl-11 pr-4 text-sm outline-none focus:border-emerald-500 focus:bg-white"
                       />
                     </div>
+
                     {targetPercentError && (
                       <p className="text-xs font-bold text-rose-600">
                         {targetPercentError}
@@ -487,6 +518,7 @@ export default function ReservationPage() {
                       <label className="ml-1 text-sm font-bold text-slate-700">
                         Nom de votre voiture
                       </label>
+
                       <input
                         value={customCarName}
                         onChange={(e) => setCustomCarName(e.target.value)}
@@ -500,9 +532,12 @@ export default function ReservationPage() {
                       <label className="ml-1 text-sm font-bold text-slate-700">
                         Capacité batterie en kWh
                       </label>
+
                       <input
                         value={customBatteryKwh}
-                        onChange={(e) => setCustomBatteryKwh(Number(e.target.value))}
+                        onChange={(e) =>
+                          setCustomBatteryKwh(Number(e.target.value))
+                        }
                         type="number"
                         min={10}
                         max={150}
@@ -518,8 +553,13 @@ export default function ReservationPage() {
                     <label className="ml-1 text-sm font-bold text-slate-700">
                       Durée de charge
                     </label>
+
                     <div className="relative">
-                      <Timer className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Timer
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                        size={18}
+                      />
+
                       <input
                         type="number"
                         min={10}
@@ -532,6 +572,7 @@ export default function ReservationPage() {
                         className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-3.5 pl-11 pr-4 text-sm outline-none focus:border-emerald-500 focus:bg-white"
                       />
                     </div>
+
                     {durationError ? (
                       <p className="text-xs font-bold text-rose-600">
                         {durationError}
@@ -550,11 +591,23 @@ export default function ReservationPage() {
                     </div>
 
                     <div className="mt-3 space-y-2 text-xs font-semibold text-emerald-900">
-                      <div>Batterie : <b>{selectedCar.batteryKwh} kWh</b></div>
-                      <div>Énergie nécessaire : <b>{estimatedKwh.toFixed(1)} kWh</b></div>
-                      <div>Temps minimum : <b>{minimumDuration} min</b></div>
-                      <div>Urgency : <b>{urgencyPreview}/100</b></div>
-                      <div>Coût estimé provisoire : <b>{estimatedCost.toFixed(2)} DT</b></div>
+                      <div>
+                        Batterie : <b>{selectedCar.batteryKwh} kWh</b>
+                      </div>
+                      <div>
+                        Énergie nécessaire :{" "}
+                        <b>{estimatedKwh.toFixed(1)} kWh</b>
+                      </div>
+                      <div>
+                        Temps minimum : <b>{minimumDuration} min</b>
+                      </div>
+                      <div>
+                        Urgency : <b>{urgencyPreview}/100</b>
+                      </div>
+                      <div>
+                        Coût estimé provisoire :{" "}
+                        <b>{estimatedCost.toFixed(2)} DT</b>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -564,7 +617,6 @@ export default function ReservationPage() {
                     loading ||
                     stationLoading ||
                     !station ||
-                    !selectedChargingPoint ||
                     station.status !== "Disponible" ||
                     !isDurationValid ||
                     !isTargetPercentValid ||
@@ -606,8 +658,13 @@ function InputDate({ date, setDate }: any) {
   return (
     <div className="space-y-2">
       <label className="ml-1 text-sm font-bold text-slate-700">Date</label>
+
       <div className="relative">
-        <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <CalendarDays
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          size={18}
+        />
+
         <input
           type="date"
           value={date}
@@ -624,8 +681,13 @@ function InputTime({ time, setTime }: any) {
   return (
     <div className="space-y-2">
       <label className="ml-1 text-sm font-bold text-slate-700">Heure</label>
+
       <div className="relative">
-        <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <Clock
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          size={18}
+        />
+
         <input
           type="time"
           value={time}
@@ -637,10 +699,19 @@ function InputTime({ time, setTime }: any) {
   );
 }
 
-function SummaryCard({ station, stationLoading, selectedCar, targetPercent, durationMin, endTime }: any) {
+function SummaryCard({
+  station,
+  stationLoading,
+  selectedCar,
+  targetPercent,
+  durationMin,
+  endTime,
+}: any) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="text-sm font-bold text-slate-900">Résumé de votre choix</div>
+      <div className="text-sm font-bold text-slate-900">
+        Résumé de votre choix
+      </div>
 
       {stationLoading ? (
         <div className="mt-4 text-sm text-slate-500">Chargement...</div>
@@ -649,7 +720,10 @@ function SummaryCard({ station, stationLoading, selectedCar, targetPercent, dura
       ) : (
         <div className="mt-4 grid gap-3">
           <InfoRow label="Station" value={station.name} />
-          <InfoRow label="Puissance station" value={`${station.power_kw ?? 22} kW`} />
+          <InfoRow
+            label="Puissance station"
+            value={`${station.power_kw ?? station.powerKw ?? 22} kW`}
+          />
           <InfoRow label="Voiture" value={selectedCar.name} />
           <InfoRow label="Batterie" value={`${selectedCar.batteryKwh} kWh`} />
           <InfoRow label="Pourcentage" value={`${targetPercent}%`} />
@@ -661,27 +735,38 @@ function SummaryCard({ station, stationLoading, selectedCar, targetPercent, dura
   );
 }
 
-function BorneCard({ selectedChargingPoint, estimatedKwh, estimatedCost, minimumDuration, urgencyPreview }: any) {
+function BorneCard({
+  selectedChargingPoint,
+  estimatedKwh,
+  estimatedCost,
+  minimumDuration,
+  urgencyPreview,
+}: any) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="text-sm font-bold text-slate-900">Borne sélectionnée</div>
+      <div className="text-sm font-bold text-slate-900">
+        Borne sélectionnée
+      </div>
 
-      {!selectedChargingPoint ? (
-        <div className="mt-4 text-sm text-amber-700">
-          Aucune borne reçue. Retournez à la page des détails.
-        </div>
-      ) : (
-        <div className="mt-4 grid gap-3">
-          <InfoRow label="Nom borne" value={selectedChargingPoint.label} />
-          <InfoRow label="Connecteur" value={selectedChargingPoint.connectorType} />
-          <InfoRow label="Puissance borne" value={`${selectedChargingPoint.powerKw} kW`} />
-          <InfoRow label="Statut" value={selectedChargingPoint.status} />
-          <InfoRow label="Énergie nécessaire" value={`${estimatedKwh.toFixed(1)} kWh`} />
-          <InfoRow label="Coût estimé provisoire" value={`${estimatedCost.toFixed(2)} DT`} />
-          <InfoRow label="Temps minimum" value={`${minimumDuration} min`} />
-          <InfoRow label="Urgency estimée" value={`${urgencyPreview}/100`} />
-        </div>
-      )}
+      <div className="mt-4 grid gap-3">
+        <InfoRow label="Nom borne" value={selectedChargingPoint.label} />
+        <InfoRow label="Connecteur" value={selectedChargingPoint.connectorType} />
+        <InfoRow
+          label="Puissance borne"
+          value={`${selectedChargingPoint.powerKw} kW`}
+        />
+        <InfoRow label="Statut" value={selectedChargingPoint.status} />
+        <InfoRow
+          label="Énergie nécessaire"
+          value={`${estimatedKwh.toFixed(1)} kWh`}
+        />
+        <InfoRow
+          label="Coût estimé provisoire"
+          value={`${estimatedCost.toFixed(2)} DT`}
+        />
+        <InfoRow label="Temps minimum" value={`${minimumDuration} min`} />
+        <InfoRow label="Urgency estimée" value={`${urgencyPreview}/100`} />
+      </div>
     </div>
   );
 }

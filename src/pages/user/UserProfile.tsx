@@ -1,4 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+
 import {
   ArrowLeft,
   LogOut,
@@ -9,10 +11,14 @@ import {
   BatteryCharging,
   History,
   ChevronRight,
+  Lock,
 } from "lucide-react";
 
 export default function UserProfile() {
   const navigate = useNavigate();
+
+  const [hasLiveAccess, setHasLiveAccess] = useState(false);
+  const [loadingAccess, setLoadingAccess] = useState(true);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -20,13 +26,44 @@ export default function UserProfile() {
     navigate("/user/login");
   };
 
-  const userName = localStorage.getItem("user_full_name") || "Utilisateur";
-  const userEmail = localStorage.getItem("user_email") || "email@exemple.com";
+  const userName =
+    localStorage.getItem("user_full_name") || "Utilisateur";
+
+  const userEmail =
+    localStorage.getItem("user_email") || "email@exemple.com";
+
+  const token = localStorage.getItem("token");
+
   const userRole = "Conducteur";
   const memberSince = "2026";
   const totalSessions = "8";
   const totalReservations = "5";
   const totalEnergy = "46.8 kWh";
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/reservations/live-access",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        setHasLiveAccess(data.hasAccess);
+      } catch (error) {
+        console.error("Erreur accès live charge :", error);
+      } finally {
+        setLoadingAccess(false);
+      }
+    };
+
+    checkAccess();
+  }, [token]);
 
   return (
     <div className="relative min-h-screen bg-[#f8fafc] text-slate-900">
@@ -53,6 +90,7 @@ export default function UserProfile() {
               <div className="text-sm font-bold text-slate-900">
                 Profil utilisateur
               </div>
+
               <div className="text-xs text-slate-500">
                 Informations conducteur
               </div>
@@ -82,9 +120,11 @@ export default function UserProfile() {
                 <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
                   Mon espace
                 </p>
+
                 <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">
                   {userName}
                 </h1>
+
                 <p className="mt-2 text-sm text-slate-600">
                   Gérez vos informations personnelles et suivez votre activité.
                 </p>
@@ -95,10 +135,12 @@ export default function UserProfile() {
               <div className="text-sm font-semibold text-emerald-700">
                 Statut du compte
               </div>
+
               <div className="mt-1 flex items-center gap-2 text-lg font-black text-slate-900">
                 <ShieldCheck size={18} className="text-emerald-600" />
                 Compte actif
               </div>
+
               <div className="mt-1 text-sm text-slate-600">
                 Accès utilisateur disponible
               </div>
@@ -106,7 +148,7 @@ export default function UserProfile() {
           </div>
         </section>
 
-        {/* Main grid */}
+        {/* Main */}
         <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           {/* Left */}
           <div className="space-y-6">
@@ -114,6 +156,7 @@ export default function UserProfile() {
               <h2 className="text-lg font-black text-slate-900">
                 Informations personnelles
               </h2>
+
               <p className="mt-1 text-sm text-slate-500">
                 Aperçu des données principales du conducteur.
               </p>
@@ -124,16 +167,19 @@ export default function UserProfile() {
                   label="Nom complet"
                   value={userName}
                 />
+
                 <ProfileInfoCard
                   icon={<Mail size={18} />}
                   label="Email"
                   value={userEmail}
                 />
+
                 <ProfileInfoCard
                   icon={<ShieldCheck size={18} />}
                   label="Rôle"
                   value={userRole}
                 />
+
                 <ProfileInfoCard
                   icon={<CalendarDays size={18} />}
                   label="Membre depuis"
@@ -146,6 +192,7 @@ export default function UserProfile() {
               <h2 className="text-lg font-black text-slate-900">
                 Activité du compte
               </h2>
+
               <p className="mt-1 text-sm text-slate-500">
                 Résumé rapide de votre utilisation de la plateforme.
               </p>
@@ -157,12 +204,14 @@ export default function UserProfile() {
                   value={totalSessions}
                   tone="emerald"
                 />
+
                 <StatMiniCard
                   icon={<CalendarDays size={18} />}
                   label="Réservations"
                   value={totalReservations}
                   tone="blue"
                 />
+
                 <StatMiniCard
                   icon={<History size={18} />}
                   label="Énergie"
@@ -186,16 +235,40 @@ export default function UserProfile() {
                   title="Retour au dashboard"
                   subtitle="Revenir à la page principale"
                 />
+
                 <QuickAccessRow
                   to="/user/history"
                   title="Voir mon historique"
                   subtitle="Consulter mes sessions et réservations"
                 />
-                <QuickAccessRow
-                  to="/user/profile"
-                  title="Mon profil"
-                  subtitle="Page actuelle du compte"
-                />
+
+                {loadingAccess ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-4">
+                    <div className="text-sm font-bold text-slate-500">
+                      Vérification accès...
+                    </div>
+                  </div>
+                ) : hasLiveAccess ? (
+                  <QuickAccessRow
+                    to="/user/live-charging"
+                    title="Suivi de charge en temps réel"
+                    subtitle="Réservation confirmée par le propriétaire"
+                  />
+                ) : (
+                  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-100 px-4 py-4 opacity-70">
+                    <div>
+                      <div className="text-sm font-bold text-slate-500">
+                        Suivi de charge en temps réel
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-400">
+                        Disponible après confirmation du propriétaire
+                      </div>
+                    </div>
+
+                    <Lock size={18} className="text-slate-400" />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -204,32 +277,14 @@ export default function UserProfile() {
                 <User size={22} />
               </div>
 
-              <h3 className="text-lg font-bold">Compte conducteur</h3>
+              <h3 className="text-lg font-bold">
+                Compte conducteur
+              </h3>
+
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Cette page centralise les informations du conducteur et donne un
                 aperçu clair de son activité sur SolarPlug.
               </p>
-
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
-                  <span className="text-sm text-slate-300">Profil</span>
-                  <span className="text-sm font-bold text-white">Actif</span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
-                  <span className="text-sm text-slate-300">Rôle</span>
-                  <span className="text-sm font-bold text-emerald-300">
-                    Conducteur
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
-                  <span className="text-sm text-slate-300">Historique</span>
-                  <span className="text-sm font-bold text-amber-300">
-                    Disponible
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
         </section>
@@ -253,7 +308,10 @@ function ProfileInfoCard({
         {icon}
         {label}
       </div>
-      <div className="mt-3 text-sm font-black text-slate-900">{value}</div>
+
+      <div className="mt-3 text-sm font-black text-slate-900">
+        {value}
+      </div>
     </div>
   );
 }
@@ -278,12 +336,20 @@ function StatMiniCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-600">{label}</span>
-        <div className={`grid h-10 w-10 place-items-center rounded-2xl ${tones[tone]}`}>
+        <span className="text-sm font-semibold text-slate-600">
+          {label}
+        </span>
+
+        <div
+          className={`grid h-10 w-10 place-items-center rounded-2xl ${tones[tone]}`}
+        >
           {icon}
         </div>
       </div>
-      <div className="mt-4 text-xl font-black text-slate-900">{value}</div>
+
+      <div className="mt-4 text-xl font-black text-slate-900">
+        {value}
+      </div>
     </div>
   );
 }
@@ -303,8 +369,13 @@ function QuickAccessRow({
       className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:bg-white"
     >
       <div>
-        <div className="text-sm font-bold text-slate-900">{title}</div>
-        <div className="mt-1 text-xs text-slate-500">{subtitle}</div>
+        <div className="text-sm font-bold text-slate-900">
+          {title}
+        </div>
+
+        <div className="mt-1 text-xs text-slate-500">
+          {subtitle}
+        </div>
       </div>
 
       <ChevronRight size={18} className="text-slate-400" />

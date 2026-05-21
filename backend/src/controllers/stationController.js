@@ -27,12 +27,17 @@ const formatStationListItem = (station) => ({
   id: station.id,
   name: station.name,
   location: station.address || station.city || "Inconnue",
+  address: station.address || "Inconnue",
+  city: station.city || "Inconnue",
   lat: station.latitude,
   lng: station.longitude,
   power_kw: station.powerKw || 0,
   status: formatStatus(station.status),
   energy_source: formatEnergySource(station.energySource),
   station_battery: station.batteryLevel || 0,
+  price_per_kwh: station.pricePerKwh || 0,
+  is_active: station.isActive,
+  owner_id: station.ownerId,
 });
 
 // -------- CREATE station --------
@@ -54,22 +59,29 @@ const createStation = async (req, res) => {
       isActive,
     } = req.body;
 
-    if (!name) {
+    if (!name || !address || !city || !powerKw) {
       return res.status(400).json({
-        message: "Le nom de la borne est obligatoire.",
+        message:
+          "Les champs nom, adresse, ville et puissance sont obligatoires.",
       });
     }
 
     const station = await Station.create({
       name,
-      address: address || null,
-      city: city || null,
-      latitude: latitude !== "" ? latitude : null,
-      longitude: longitude !== "" ? longitude : null,
-      powerKw: powerKw !== "" ? powerKw : null,
+      address,
+      city,
+      latitude: latitude !== "" && latitude !== undefined ? latitude : null,
+      longitude: longitude !== "" && longitude !== undefined ? longitude : null,
+      powerKw: powerKw !== "" && powerKw !== undefined ? powerKw : null,
       energySource: energySource || "solar",
-      batteryLevel: batteryLevel !== "" ? batteryLevel : null,
-      pricePerKwh: pricePerKwh !== "" ? pricePerKwh : null,
+      batteryLevel:
+        batteryLevel !== "" && batteryLevel !== undefined
+          ? batteryLevel
+          : null,
+      pricePerKwh:
+        pricePerKwh !== "" && pricePerKwh !== undefined
+          ? pricePerKwh
+          : null,
       status: status || "available",
       isActive: typeof isActive === "boolean" ? isActive : true,
       ownerId,
@@ -83,11 +95,12 @@ const createStation = async (req, res) => {
     console.error("createStation error:", error);
     return res.status(500).json({
       message: "Erreur serveur lors de la création de la borne.",
+      error: error.message,
     });
   }
 };
 
-// -------- GET all stations --------
+// -------- GET all active stations --------
 const getStations = async (req, res) => {
   try {
     const stations = await Station.findAll({
@@ -97,10 +110,55 @@ const getStations = async (req, res) => {
 
     const formattedStations = stations.map(formatStationListItem);
 
-    res.json(formattedStations);
+    return res.json(formattedStations);
   } catch (error) {
     console.error("getStations error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+};
+
+// -------- GET stations by city --------
+const getStationsByCity = async (req, res) => {
+  try {
+    const { city } = req.params;
+
+    const stations = await Station.findAll({
+      where: {
+        city,
+        isActive: true,
+      },
+      order: [["id", "DESC"]],
+    });
+
+    const formattedStations = stations.map(formatStationListItem);
+
+    return res.json(formattedStations);
+  } catch (error) {
+    console.error("getStationsByCity error:", error);
+    return res.status(500).json({
+      message: "Erreur serveur lors de la récupération des bornes par ville.",
+    });
+  }
+};
+
+// -------- GET owner stations --------
+const getMyStations = async (req, res) => {
+  try {
+    const ownerId = req.user.id;
+
+    const stations = await Station.findAll({
+      where: { ownerId },
+      order: [["id", "DESC"]],
+    });
+
+    const formattedStations = stations.map(formatStationListItem);
+
+    return res.json(formattedStations);
+  } catch (error) {
+    console.error("getMyStations error:", error);
+    return res.status(500).json({
+      message: "Erreur serveur lors de la récupération des bornes du propriétaire.",
+    });
   }
 };
 
@@ -112,7 +170,7 @@ const getStationById = async (req, res) => {
     const station = await Station.findByPk(stationId);
 
     if (!station) {
-      return res.status(404).json({ message: "Station not found" });
+      return res.status(404).json({ message: "Station introuvable." });
     }
 
     const reservationsCount = await Reservation.count({
@@ -128,10 +186,12 @@ const getStationById = async (req, res) => {
       order: [["recordedAt", "DESC"]],
     });
 
-    res.json({
+    return res.json({
       id: station.id,
       name: station.name,
       location: station.address || station.city || "Inconnue",
+      address: station.address || "Inconnue",
+      city: station.city || "Inconnue",
       lat: station.latitude,
       lng: station.longitude,
       power_kw: station.powerKw || 0,
@@ -153,12 +213,14 @@ const getStationById = async (req, res) => {
     });
   } catch (error) {
     console.error("getStationById error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Erreur serveur." });
   }
 };
 
 module.exports = {
   getStations,
+  getStationsByCity,
+  getMyStations,
   getStationById,
   createStation,
 };

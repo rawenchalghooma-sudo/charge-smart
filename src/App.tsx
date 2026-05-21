@@ -15,6 +15,8 @@ import ReservationQRCode from "./pages/user/ReservationQRCode.tsx";
 import ChargingSession from "./pages/user/ChargingSession";
 import UserHistory from "./pages/user/UserHistory";
 import UserProfile from "./pages/user/UserProfile";
+import LiveChargingPage from "./pages/user/LiveChargingPage";
+import UserSOS from "./pages/user/UserSOS";
 
 /* OWNER */
 import OwnerLogin from "./pages/owner/OwnerLogin";
@@ -66,6 +68,8 @@ export default function App() {
       <Route path="/user/network-stations" element={<NetworkStations />} />
       <Route path="/user/history" element={<UserHistory />} />
       <Route path="/user/profile" element={<UserProfile />} />
+      <Route path="/user/live-charging" element={<LiveChargingPage />} />
+      <Route path="/user/sos" element={<UserSOS />} />
       <Route path="/user/plug/:id" element={<PlugDetails />} />
       <Route path="/user/reserve/:id" element={<ReservationPage />} />
       <Route path="/user/reservation-qr/:id" element={<ReservationQRCode />} />

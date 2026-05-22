@@ -112,18 +112,20 @@ export default function UserLogin() {
   console.error(err);
 
   const demoUser = demoLogin(
-    form.email,
-    form.password,
+    form.email.trim(),
+    form.password.trim(),
     "user"
   );
 
   if (demoUser) {
     localStorage.setItem("user", JSON.stringify(demoUser));
+    localStorage.setItem("user_logged_in", "true");
+
     navigate("/user/dashboard");
     return;
   }
 
-  setError("Impossible de contacter le serveur.");
+  setError("Email ou mot de passe incorrect.");
 } finally {
     setLoading(false);
   }

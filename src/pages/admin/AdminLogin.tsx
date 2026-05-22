@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { demoLogin } from "../../api/demoLogin";
 import {
   Mail,
   Lock,
@@ -81,9 +82,26 @@ export default function AdminLogin() {
       storage.setItem("user_logged_in", "true");
 
       navigate("/admin/dashboard");
-    } catch (error: any) {
-      setError(error.message || "Impossible de contacter le serveur.");
-    } finally {
+    } catch (err) {
+  console.error(err);
+
+  const demoUser = demoLogin(
+    form.email.trim(),
+    form.password.trim(),
+    "admin"
+  );
+
+  if (demoUser) {
+    localStorage.setItem("user", JSON.stringify(demoUser));
+    localStorage.setItem("admin_logged_in", "true");
+    localStorage.setItem("user_role", "admin");
+
+    navigate("/admin/dashboard");
+    return;
+  }
+
+  setError("Email ou mot de passe incorrect.");
+} finally {
       setLoading(false);
     }
   };

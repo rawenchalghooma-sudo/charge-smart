@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { demoLogin } from "../../api/demoLogin";
 
 // Icônes (lucide-react)
 import {
@@ -108,9 +109,22 @@ export default function UserLogin() {
 
     navigate("/user/dashboard");
   } catch (err) {
-    console.error(err);
-    setError("Impossible de contacter le serveur.");
-  } finally {
+  console.error(err);
+
+  const demoUser = demoLogin(
+    form.email,
+    form.password,
+    "user"
+  );
+
+  if (demoUser) {
+    localStorage.setItem("user", JSON.stringify(demoUser));
+    navigate("/user/dashboard");
+    return;
+  }
+
+  setError("Impossible de contacter le serveur.");
+} finally {
     setLoading(false);
   }
 }

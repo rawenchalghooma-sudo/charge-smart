@@ -152,7 +152,7 @@ export default function UserLogin() {
               <Sun size={20} />
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-800">
-              SolarPlug
+              Charge Smart
             </span>
           </Link>
 

@@ -482,7 +482,7 @@ export default function ReservationPage() {
 
                   <div className="space-y-2">
                     <label className="ml-1 text-sm font-bold text-slate-700">
-                      Pourcentage souhaité
+                      Pourcentage actuel
                     </label>
 
                     <div className="relative">

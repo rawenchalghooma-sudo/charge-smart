@@ -139,7 +139,7 @@ export default function Signup() {
                 <Zap size={22} className="fill-white text-white" />
               </div>
               <span className="text-xl font-black italic tracking-tight">
-                SolarPlug
+                Charge Smart
               </span>
             </div>
 

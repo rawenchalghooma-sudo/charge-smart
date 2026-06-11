@@ -224,7 +224,7 @@ export default function UserDashboard() {
                     Tension
                   </div>
                   <div className="mt-2 text-3xl font-black text-blue-700">
-                    {donnees.tension.toFixed(1)}
+                    {Number(donnees?.tension || 0).toFixed(1)}
                   </div>
                   <div className="text-sm text-blue-500">Volts</div>
                 </div>
@@ -234,7 +234,7 @@ export default function UserDashboard() {
                     Courant
                   </div>
                   <div className="mt-2 text-3xl font-black text-purple-700">
-                    {donnees.courant.toFixed(2)}
+                    {Number(donnees?.courant || 0).toFixed(2)}
                   </div>
                   <div className="text-sm text-purple-500">Ampères</div>
                 </div>
@@ -244,7 +244,7 @@ export default function UserDashboard() {
                     Puissance
                   </div>
                   <div className="mt-2 text-3xl font-black text-amber-700">
-                    {donnees.puissance.toFixed(1)}
+                    {Number(donnees?.puissance || 0).toFixed(1)}
                   </div>
                   <div className="text-sm text-amber-500">Watts</div>
                 </div>
@@ -254,7 +254,7 @@ export default function UserDashboard() {
                     Luminosité
                   </div>
                   <div className="mt-2 text-3xl font-black text-emerald-700">
-                    {Math.round(donnees.luminosite)}
+                    {Math.round(Number(donnees?.luminosite || 0))}
                   </div>
                   <div className="text-sm text-emerald-500">Lux</div>
                 </div>

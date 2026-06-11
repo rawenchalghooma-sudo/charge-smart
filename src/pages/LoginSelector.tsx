@@ -46,7 +46,7 @@ export default function LoginSelector() {
               ☀️
             </div>
             <span className="text-sm font-semibold text-slate-900">
-              SolarPlug
+              Charge Smart
             </span>
           </Link>
 

@@ -41,22 +41,21 @@ interface StationInfo {
   pricePerKwh: number;
 }
 
-// IP de ton serveur Node.js
-const WS_URL = "ws://192.168.0.10:3002";
+const WS_URL = "ws://10.240.5.215:3002";
 
 export default function LiveChargingPage() {
   const navigate = useNavigate();
 
   const [chargeType, setChargeType] = useState<ChargeType>("DC");
-  const [source, setSource]         = useState<ChargeSource>("Panneau solaire");
-  const [status]                    = useState("Charge en cours");
+  const [source, setSource] = useState<ChargeSource>("Panneau solaire");
+  const [status] = useState("Charge en cours");
   const [batteryLevel, setBatteryLevel] = useState(0);
-  const [energy, setEnergy]         = useState(0);
-  const [cost, setCost]             = useState(0);
+  const [energy, setEnergy] = useState(0);
+  const [cost, setCost] = useState(0);
   const [wsConnecte, setWsConnecte] = useState(false);
 
-  const energyRef         = useRef(0);
-  const pricePerKwhRef    = useRef(0.45);
+  const energyRef = useRef(0);
+  const pricePerKwhRef = useRef(0.45);
 
   const [station, setStation] = useState<StationInfo>({
     name: "",
@@ -68,7 +67,6 @@ export default function LiveChargingPage() {
 
   const [data, setData] = useState<ChargeData[]>([]);
 
-  // ── Récupération infos station ────────────────────────────
   useEffect(() => {
     const fetchLiveReservation = async () => {
       try {
@@ -85,12 +83,14 @@ export default function LiveChargingPage() {
         if (result?.hasAccess && result?.reservation?.Station) {
           const s = result.reservation.Station;
           const prix = s.pricePerKwh || 0.45;
+
           pricePerKwhRef.current = prix;
+
           setStation({
-            name:        s.name        || "Station",
-            city:        s.city        || "",
-            address:     s.address     || "",
-            powerKw:     s.powerKw     || 0,
+            name: s.name || "Station",
+            city: s.city || "",
+            address: s.address || "",
+            powerKw: s.powerKw || 0,
             pricePerKwh: prix,
           });
         } else {
@@ -105,7 +105,6 @@ export default function LiveChargingPage() {
     fetchLiveReservation();
   }, [navigate]);
 
-  // ── WebSocket — données réelles ESP32 ────────────────────
   useEffect(() => {
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;
@@ -122,64 +121,63 @@ export default function LiveChargingPage() {
         try {
           const esp = JSON.parse(event.data);
           console.log("📡 Données ESP32 :", esp);
-          // Si la recharge est terminée ou arrêtée, vider les données de suivi
-if (esp.charging === false || esp.decision === "STOP") {
-  setBatteryLevel(Math.round(Number(esp.soc || 0)));
-  setEnergy(0);
-  setCost(0);
-  setData([]);
-  energyRef.current = 0;
-  setSource("Panneau solaire");
-  setChargeType("DC");
-  return;
-}
 
-          // SOC batterie réel
           if (esp.soc !== undefined) {
-            setBatteryLevel(Math.round(esp.soc));
+            setBatteryLevel(Math.round(Number(esp.soc)));
           }
 
-          // Source IA réelle
+          if (
+            esp.charging === false &&
+            esp.decision === "STOP" &&
+            energyRef.current > 0
+          ) {
+            setEnergy(0);
+            setCost(0);
+            setData([]);
+            energyRef.current = 0;
+            setSource("Panneau solaire");
+            setChargeType("DC");
+            return;
+          }
+
           if (esp.source) {
             const sourceMap: Record<string, ChargeSource> = {
-              "PANNEAU SOLAIRE":  "Panneau solaire",
+              "PANNEAU SOLAIRE": "Panneau solaire",
               "BATTERIE STATION": "Batterie",
-              "STEG":             "STEG",
+              STEG: "STEG",
+              AUCUNE: "Panneau solaire",
             };
-            setSource(sourceMap[esp.source] || "STEG");
 
-            // Type de charge selon source
+            setSource(sourceMap[esp.source] || "Panneau solaire");
             setChargeType(esp.source === "PANNEAU SOLAIRE" ? "DC" : "AC");
           }
 
-          // Énergie accumulée depuis p_pv
-          // Énergie accumulée depuis la puissance réelle
-// Si source = Batterie ou STEG → utiliser p_recharge
-// Si source = Panneau solaire → utiliser p_pv
-const puissance = Number(esp.p_recharge || esp.p_pv || 0);
+          const puissance = Number(esp.p_recharge || esp.p_pv || 0);
 
-if (puissance > 0) {
-  // Puissance en kW, données envoyées chaque 5 secondes
-  const delta = puissance * (5 / 3600); // kWh
+          if (puissance > 0 && esp.charging === true) {
+            const delta = puissance * (5 / 3600);
 
-  const newEnergy = Number((energyRef.current + delta).toFixed(4));
-  const newCost = Number((newEnergy * pricePerKwhRef.current).toFixed(2));
+            const newEnergy = Number((energyRef.current + delta).toFixed(4));
+            const newCost = Number(
+              (newEnergy * pricePerKwhRef.current).toFixed(2)
+            );
 
-  energyRef.current = newEnergy;
-  setEnergy(newEnergy);
-  setCost(newCost);
+            energyRef.current = newEnergy;
+            setEnergy(newEnergy);
+            setCost(newCost);
 
-  const now = new Date().toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+            const now = new Date().toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            });
 
-  setData((prev) =>
-    [...prev, { time: now, energy: newEnergy, cost: newCost }].slice(-12)
-  );
-}
-
+            setData((prev) =>
+              [...prev, { time: now, energy: newEnergy, cost: newCost }].slice(
+                -12
+              )
+            );
+          }
         } catch (err) {
           console.error("Erreur parsing WebSocket :", err);
         }
@@ -207,14 +205,12 @@ if (puissance > 0) {
 
   const getSourceIcon = () => {
     if (source === "Panneau solaire") return <Sun size={22} />;
-    if (source === "Batterie")        return <Battery size={22} />;
+    if (source === "Batterie") return <Battery size={22} />;
     return <Factory size={22} />;
   };
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
-
-      {/* Header */}
       <div className="border-b border-slate-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-4">
@@ -225,6 +221,7 @@ if (puissance > 0) {
               <ArrowLeft size={18} />
               Retour
             </button>
+
             <div>
               <h1 className="text-xl font-black text-slate-900">
                 Suivi de charge en temps réel
@@ -236,15 +233,18 @@ if (puissance > 0) {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Indicateur connexion ESP32 */}
-            <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium ${
-              wsConnecte
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
-            }`}>
-              <span className={`h-2 w-2 rounded-full ${
-                wsConnecte ? "bg-green-500" : "bg-red-500"
-              }`} />
+            <div
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium ${
+                wsConnecte
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  wsConnecte ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
               {wsConnecte ? "ESP32 connecté" : "ESP32 déconnecté"}
             </div>
 
@@ -259,8 +259,6 @@ if (puissance > 0) {
       </div>
 
       <main className="mx-auto max-w-7xl p-6">
-
-        {/* Infos station */}
         <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="grid gap-5 md:grid-cols-3">
             <div className="flex items-center gap-4">
@@ -299,7 +297,6 @@ if (puissance > 0) {
           </div>
         </section>
 
-        {/* Cards + Courbes */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <InfoCard
             icon={<BatteryCharging size={24} />}
@@ -341,7 +338,6 @@ if (puissance > 0) {
             color="orange"
           />
 
-          {/* Décision intelligente */}
           <div className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm">
             <h2 className="mb-4 text-lg font-bold">Décision intelligente</h2>
             <div className="space-y-3 text-sm">
@@ -362,7 +358,6 @@ if (puissance > 0) {
             </div>
           </div>
 
-          {/* Courbe 1 */}
           <ChartCard
             title="Courbe 1 : énergie chargée en temps réel"
             subtitle="Axe X = temps, Axe Y = énergie chargée en kWh"
@@ -384,7 +379,6 @@ if (puissance > 0) {
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* Courbe 2 */}
           <ChartCard
             title="Courbe 2 : argent dépensé en temps réel"
             subtitle="Axe X = temps, Axe Y = coût total en TND"
@@ -406,7 +400,6 @@ if (puissance > 0) {
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* Courbe 3 */}
           <ChartCard
             title="Courbe 3 : charge en fonction de l'argent"
             subtitle="Axe X = argent dépensé, Axe Y = énergie chargée"
@@ -438,7 +431,6 @@ if (puissance > 0) {
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
-
         </section>
       </main>
     </div>
@@ -446,7 +438,11 @@ if (puissance > 0) {
 }
 
 function InfoCard({
-  icon, title, value, subtitle, color,
+  icon,
+  title,
+  value,
+  subtitle,
+  color,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -455,8 +451,8 @@ function InfoCard({
   color: "green" | "blue" | "yellow" | "purple" | "orange";
 }) {
   const colors = {
-    green:  "bg-green-100 text-green-700",
-    blue:   "bg-blue-100 text-blue-700",
+    green: "bg-green-100 text-green-700",
+    blue: "bg-blue-100 text-blue-700",
     yellow: "bg-yellow-100 text-yellow-700",
     purple: "bg-purple-100 text-purple-700",
     orange: "bg-orange-100 text-orange-700",
@@ -477,7 +473,9 @@ function InfoCard({
 }
 
 function ChartCard({
-  title, subtitle, children,
+  title,
+  subtitle,
+  children,
 }: {
   title: string;
   subtitle: string;

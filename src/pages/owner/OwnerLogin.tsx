@@ -2,16 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { demoLogin } from "../../api/demoLogin";
 import {
-  Mail,
-  Lock,
-  ShieldCheck,
   ArrowRight,
   Eye,
   EyeOff,
-  Zap,
   ChevronLeft,
   Activity,
   Sun,
+  MapPin,
+  Zap,
 } from "lucide-react";
 
 export default function OwnerLogin() {
@@ -61,8 +59,8 @@ export default function OwnerLogin() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: form.email,
-          password: form.password,
+          email: form.email.trim(),
+          password: form.password.trim(),
         }),
       });
 
@@ -80,152 +78,165 @@ export default function OwnerLogin() {
       storage.setItem("user_full_name", data.user.name);
       storage.setItem("user_role", data.user.role);
       storage.setItem("user_logged_in", "true");
+      storage.setItem("owner_logged_in", "true");
 
       navigate("/owner/dashboard");
     } catch (err) {
-  console.error(err);
+      console.error(err);
 
-  const demoUser = demoLogin(
-    form.email.trim(),
-    form.password.trim(),
-    "owner"
-  );
+      const demoUser = demoLogin(
+        form.email.trim(),
+        form.password.trim(),
+        "owner"
+      );
 
-  if (demoUser) {
-    localStorage.setItem("user", JSON.stringify(demoUser));
-    localStorage.setItem("owner_logged_in", "true");
-    localStorage.setItem("user_role", "owner");
+      if (demoUser) {
+        const storage = form.remember ? localStorage : sessionStorage;
 
-    navigate("/owner/dashboard");
-    return;
-  }
+        storage.setItem("user", JSON.stringify(demoUser));
+        storage.setItem("owner_logged_in", "true");
+        storage.setItem("user_role", "owner");
+        storage.setItem("user_logged_in", "true");
 
-  setError("Email ou mot de passe incorrect.");
-} finally {
+        navigate("/owner/dashboard");
+        return;
+      }
+
+      setError("Email ou mot de passe incorrect.");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-4">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full bg-emerald-100/20 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] h-[400px] w-[400px] rounded-full bg-blue-100/20 blur-[100px]" />
-      </div>
-
-      <div className="relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-[3rem] border border-white bg-white/70 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] backdrop-blur-md lg:flex-row">
-        <div className="relative flex flex-col justify-between bg-gradient-to-br from-emerald-600 to-green-500 p-12 text-white lg:w-2/5">
-          <div className="relative z-10">
-            <div className="mb-16 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 rotate-3 shadow-lg shadow-emerald-500/20">
-                <Zap size={22} className="fill-white text-white" />
-              </div>
-              <span className="text-xl font-black italic tracking-tight">
-                SolarPlug
-              </span>
+    <div className="min-h-screen bg-[#F7FAF8] text-slate-900">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-green-500 text-white shadow-lg shadow-green-500/25">
+              <Sun size={23} />
             </div>
 
-            <h1 className="mb-8 text-4xl font-bold leading-[1.15]">
-              Gérez vos stations <br />
-              <span className="text-white/90 text-3xl">avec précision.</span>
-            </h1>
-
-            <div className="mt-12 space-y-10">
-              <div className="flex gap-5">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[1.25rem] border border-white/20 bg-white/10">
-                  <Activity size={22} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold">Monitoring EMS</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-emerald-50">
-                    Surveillance de l'énergie solaire et des batteries en temps réel.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-5">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[1.25rem] border border-white/20 bg-white/10">
-                  <Sun size={22} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold">Optimisation Solaire</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-emerald-50">
-                    Maximisez l'auto-consommation de vos bornes de recharge.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <span className="text-xl font-extrabold text-slate-950">
+              Charge Smart
+            </span>
           </div>
 
-          <div className="relative z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] opacity-70">
-            <ShieldCheck size={14} />
-            Accès Propriétaire Sécurisé
-          </div>
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-green-600"
+          >
+            <ChevronLeft size={18} />
+            Retour
+          </Link>
         </div>
+      </header>
 
-        <div className="flex flex-1 items-center p-8 lg:p-16">
-          <div className="mx-auto w-full max-w-md">
-            <div className="mb-12 text-center lg:text-left">
-              <span className="mb-3 inline-block rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600">
-                Espace Gestion
-              </span>
+      <main className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-10 px-8 pt-24 pb-8 lg:grid-cols-2">
+        <section>
+          <span className="mb-5 inline-flex rounded-full bg-green-100 px-6 py-2 text-xs font-extrabold uppercase tracking-[0.18em] text-green-700">
+            Espace Owner
+          </span>
 
-              <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-slate-900">
-                Connexion
+          <h1 className="max-w-2xl text-5xl font-black leading-[1.08] tracking-tight text-slate-950 lg:text-6xl">
+            Gérez vos bornes avec{" "}
+            <span className="text-green-500">l’énergie du soleil.</span>
+          </h1>
+
+          <p className="mt-6 max-w-xl text-lg font-medium leading-relaxed text-slate-600">
+            Connectez-vous pour accéder à votre espace propriétaire, suivre vos
+            stations, vos réservations et la performance énergétique.
+          </p>
+
+          <div className="mt-10 max-w-xl space-y-5">
+            <div className="flex items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-600">
+                <MapPin size={25} />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-950">
+                  Gestion des bornes
+                </h3>
+                <p className="text-sm font-medium text-slate-500">
+                  Localisation et état des stations en temps réel.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-600">
+                <Zap size={25} />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-950">
+                  Suivi des réservations
+                </h3>
+                <p className="text-sm font-medium text-slate-500">
+                  Consultez les demandes, revenus et sessions de charge.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-600">
+                <Activity size={25} />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-950">
+                  Suivi énergétique
+                </h3>
+                <p className="text-sm font-medium text-slate-500">
+                  Analyse de la consommation et de l’origine de l’énergie.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="flex justify-center lg:justify-end">
+          <div className="w-full max-w-[470px] rounded-[2.3rem] border border-slate-200 bg-white p-10 shadow-[0_30px_80px_-25px_rgba(0,0,0,0.15)] lg:p-12">
+            <div className="mb-9">
+              <h2 className="text-3xl font-black text-slate-950">
+                Bon retour !
               </h2>
 
-              <p className="font-medium italic text-slate-400">
-                Accédez à votre parc de bornes SolarPlug.
+              <p className="mt-2 text-base font-medium text-slate-500">
+                Ravi de vous revoir parmi nous.
               </p>
             </div>
 
             {error && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-1.5">
-                <label className="ml-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-                  Identifiant E-mail
+              <div>
+                <label className="mb-3 block text-sm font-extrabold text-slate-900">
+                  Email
                 </label>
-                <div className="group relative">
-                  <Mail
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-emerald-500"
-                    size={18}
-                  />
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="proprietaire@solarplug.com"
-                    className="w-full rounded-[1.25rem] border border-slate-100 bg-slate-50/50 py-4 pl-12 pr-4 text-sm font-semibold outline-none transition-all placeholder:text-slate-300 focus:border-emerald-200 focus:bg-white focus:ring-[6px] focus:ring-emerald-500/5"
-                  />
-                </div>
+
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="owner@gmail.com"
+                  className="w-full rounded-2xl border border-green-100 bg-green-50/50 px-6 py-5 text-sm font-semibold text-slate-950 outline-none transition focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-500/10"
+                />
               </div>
 
-              <div className="space-y-1.5">
-                <div className="ml-1 flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                    Mot de passe
-                  </label>
+              <div>
+                <label className="mb-3 block text-sm font-extrabold text-slate-900">
+                  Mot de passe
+                </label>
 
-                  <button
-                    type="button"
-                    className="text-[11px] font-bold text-emerald-600 hover:underline"
-                  >
-                    Oublié ?
-                  </button>
-                </div>
-
-                <div className="group relative">
-                  <Lock
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-emerald-500"
-                    size={18}
-                  />
+                <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
@@ -233,70 +244,61 @@ export default function OwnerLogin() {
                     value={form.password}
                     onChange={handleChange}
                     placeholder="••••••••"
-                    className="w-full rounded-[1.25rem] border border-slate-100 bg-slate-50/50 py-4 pl-12 pr-12 text-sm font-semibold outline-none transition-all placeholder:text-slate-300 focus:border-emerald-200 focus:bg-white focus:ring-[6px] focus:ring-emerald-500/5"
+                    className="w-full rounded-2xl border border-green-100 bg-green-50/50 px-6 py-5 pr-14 text-sm font-semibold text-slate-950 outline-none transition focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-500/10"
                   />
+
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors hover:text-slate-600"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-green-600"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 px-1 py-2">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  name="remember"
-                  checked={form.remember}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-slate-200 text-emerald-500 focus:ring-emerald-500/20"
-                />
-                <label
-                  htmlFor="remember"
-                  className="cursor-pointer select-none text-xs font-bold text-slate-500"
-                >
-                  Rester connecté sur cet appareil
+              <div className="flex items-center justify-between">
+                <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-slate-600">
+                  <input
+                    type="checkbox"
+                    name="remember"
+                    checked={form.remember}
+                    onChange={handleChange}
+                    className="h-5 w-5 cursor-pointer rounded accent-green-600"
+                  />
+                  Rester connecté
                 </label>
+
+                <button
+                  type="button"
+                  className="text-sm font-extrabold text-green-600 transition hover:text-green-700"
+                >
+                  Oublié ?
+                </button>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="group mt-6 flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-slate-900 py-4 text-sm font-bold text-white shadow-xl shadow-slate-200 transition-all hover:-translate-y-0.5 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#080B10] py-5 text-sm font-extrabold text-white shadow-xl shadow-black/20 transition hover:-translate-y-0.5 hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {loading ? "Connexion..." : "Se connecter à la console"}
-                <ArrowRight
-                  size={18}
-                  className="transition-transform group-hover:translate-x-1"
-                />
+                {loading ? "Connexion..." : "Se connecter au réseau"}
+                <ArrowRight size={18} />
               </button>
             </form>
 
-            <div className="mt-12 text-center">
-              <p className="text-sm font-semibold text-slate-400">
-                Nouveau partenaire ?{" "}
-                <Link
-                  to="/signup"
-                  className="font-black text-emerald-600 underline-offset-4 hover:underline"
-                >
-                  Devenir Hôte
-                </Link>
-              </p>
-
+            <p className="mt-9 text-center text-sm font-medium text-slate-500">
+              Pas encore de compte ?{" "}
               <Link
-                to="/"
-                className="mt-8 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-300 transition-colors hover:text-slate-500"
+                to="/signup"
+                className="font-extrabold text-green-600 transition hover:text-green-700"
               >
-                <ChevronLeft size={14} />
-                Portail Public
+                S’inscrire
               </Link>
-            </div>
+            </p>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

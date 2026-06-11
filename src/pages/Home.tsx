@@ -63,7 +63,7 @@ export default function Home() {
               ☀️
             </div>
             <div className="text-sm font-semibold text-slate-900">
-              SolarPlug
+              Charge Smart
             </div>
           </div>
 
@@ -126,7 +126,7 @@ export default function Home() {
         {/* Pourquoi choisir */}
         <div className="text-center">
           <h2 className="text-xl font-bold text-slate-900">
-            Pourquoi choisir SolarPlug ?
+            Pourquoi choisir Charge Smart ?
           </h2>
         </div>
 
@@ -155,7 +155,7 @@ export default function Home() {
           <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>☀️</span>
-              <span className="font-semibold text-slate-700">SolarPlug</span>
+              <span className="font-semibold text-slate-700">Charge Smart</span>
               <span>— Réseau de recharge à énergie renouvelable</span>
             </div>
 
